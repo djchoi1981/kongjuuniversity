@@ -61,8 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (savedTx) transactions = JSON.parse(savedTx);
 
   lucide.createIcons();
-  
-  document.getElementById('tx-date').valueAsDate = new Date();
+  const nowStr = new Date().toISOString().substring(0, 7);
+  document.getElementById('tx-date').value = nowStr;
   document.getElementById('member-joindate').valueAsDate = new Date();
 
   // Update dynamic income options when date changes
@@ -273,6 +273,75 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // ADD MEMBER Logic
+  document.getElementById('btn-open-bulk-dues').addEventListener('click', () => {
+    document.getElementById('bulk-month').value = new Date().toISOString().substring(0, 7);
+    
+    const tbody = document.getElementById('bulk-members-list');
+    tbody.innerHTML = members.map(m => `
+      <tr>
+        <td style="font-weight:500;">${m.name}</td>
+        <td><span class="badge badge-${(m.level||'member').toLowerCase()}">${m.level}</span></td>
+        <td>
+          <select class="input-field bulk-status-select" data-id="${m.id}" data-name="${m.name}" data-level="${m.level}" style="padding: 0.25rem 0.5rem; font-size: 0.85rem; width: auto;">
+            <option value="paid" selected>납부완료</option>
+            <option value="exempt">공제</option>
+            <option value="unpaid">미납</option>
+          </select>
+        </td>
+      </tr>
+    `).join('');
+
+    document.getElementById('modal-bulk-dues').style.display = 'flex';
+  });
+
+  document.getElementById('form-bulk-dues').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const targetMonth = document.getElementById('bulk-month').value;
+    const selects = document.querySelectorAll('.bulk-status-select');
+    
+    const duesPolicy = getDuesForDate(targetMonth);
+    const amountPaid = duesPolicy.monthly;
+    
+    let addedCount = 0;
+    
+    selects.forEach(select => {
+      const status = select.value;
+      const memberName = select.getAttribute('data-name');
+      const memberLevel = select.getAttribute('data-level').toLowerCase();
+      
+      let amount = 0;
+      let statusDesc = '월납';
+      if (status === 'paid') {
+        amount = amountPaid;
+      } else if (status === 'exempt') {
+        amount = 0;
+        statusDesc = '공제';
+      } else if (status === 'unpaid') {
+        amount = 0;
+        statusDesc = '미납';
+      }
+      
+      const newTx = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        kind: 'income',
+        type: statusDesc,
+        status: status,
+        desc: memberName,
+        amount: amount,
+        date: targetMonth,
+        badge: memberLevel
+      };
+      
+      transactions.unshift(newTx);
+      addedCount++;
+    });
+    
+    saveAllToLocal();
+    renderAll();
+    document.getElementById('modal-bulk-dues').style.display = 'none';
+    alert(`${targetMonth}월 회비 내역 ${addedCount}건이 일괄 등록되었습니다.`);
+  });
+
   document.getElementById('form-add-member').addEventListener('submit', (e) => {
     e.preventDefault();
     const newMember = {
@@ -327,8 +396,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (kind === 'income') {
       const name = document.getElementById('tx-member').value;
-      const member = members.find(m => m.name === name);
-      if(!member) {
+      const mem = members.find(m => m.name === name);
+      if(!mem) {
         alert("등록된 회원이 아닙니다. 드롭다운에서 선택하거나 먼저 회원을 추가해주세요.");
         return;
       }
@@ -338,10 +407,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const dues = getDuesForDate(date);
       const amount = isAnnual ? dues.annual : dues.monthly;
 
-      newTx.type = isAnnual ? '연납' : '월납';
-      newTx.desc = name;
-      newTx.amount = amount;
-      newTx.badge = member.level.toLowerCase();
+      const newTx = {
+        id: Date.now().toString(),
+        kind: 'income',
+        type: isAnnual ? '연납' : '월납',
+        status: 'paid',
+        desc: name,
+        amount: amount,
+        date: date,
+        badge: mem.level.toLowerCase()
+      };
+      
+      transactions.unshift(newTx);
       alert(`[${name}]님의 회비 수입 처리가 완료되었습니다.`);
 
     } else {
@@ -354,10 +431,10 @@ document.addEventListener('DOMContentLoaded', () => {
       newTx.desc = desc;
       newTx.amount = -Math.abs(parseInt(amountStr)); // Ensure negative
       newTx.badge = 'member';
+      transactions.unshift(newTx);
       alert(`경조사(지출) 내역이 정상적으로 등록되었습니다.`);
     }
     
-    transactions.unshift(newTx);
     saveAllToLocal();
     renderAll();
     
@@ -411,9 +488,14 @@ window.deleteTx = function(id) {
 };
 
 function saveAllToLocal() {
+  const now = new Date();
+  const pad = (n) => n.toString().padStart(2, '0');
+  settings.lastModified = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  
   localStorage.setItem('erp_settings', JSON.stringify(settings));
   localStorage.setItem('erp_members', JSON.stringify(members));
   localStorage.setItem('erp_transactions', JSON.stringify(transactions));
+  renderLogo();
 }
 
 // Logo Compression Helper (We still need this purely for Logo resizing without crop UI)
@@ -456,7 +538,8 @@ function renderAll() {
 
 function renderLogo() {
   const container = document.getElementById('app-logo-container');
-  const versionBadge = `<span class="version-badge">v1.1</span>`;
+  let dateText = settings.lastModified ? `(최종수정: ${settings.lastModified})` : '';
+  const versionBadge = `<span class="version-badge">v1.2</span><span style="font-size:0.75rem; color:var(--text-secondary); margin-left:0.5rem; font-weight:normal;">${dateText}</span>`;
   if (settings.logoData) {
     container.innerHTML = `<img src="${settings.logoData}" style="width: ${settings.logoWidth}px; max-width:100%;"> ${versionBadge}`;
   } else {
@@ -468,7 +551,7 @@ function updateFormOptions() {
   const datalist = document.getElementById('members-datalist');
   datalist.innerHTML = members.map(m => `<option value="${m.name}">`).join('');
 
-  const dateStr = document.getElementById('tx-date')?.value || new Date().toISOString().split('T')[0];
+  const dateStr = document.getElementById('tx-date')?.value || new Date().toISOString().substring(0, 7);
   updateIncomeOptions(dateStr);
 
   const expenseSelect = document.getElementById('tx-expense-category');
@@ -476,7 +559,7 @@ function updateFormOptions() {
 }
 
 function getDuesForDate(dateStr) {
-  if (dateStr && dateStr <= '2025-12-31') {
+  if (dateStr && dateStr <= '2025-12') {
     return { monthly: 20000, annual: 240000, hasDiscount: false };
   } else {
     const monthly = settings.monthlyDues;
@@ -550,15 +633,29 @@ function renderTransactions() {
   const txTbody = document.getElementById('transactions-list');
   txTbody.innerHTML = transactions.map(t => {
     const isInc = t.kind === 'income';
+    let typeHtml = t.type;
+    let badgeHtml = t.badge ? `<span class="badge badge-${t.badge}">${t.badge}</span>` : '';
+    
+    let amountHtml = formatCurrency(t.amount);
+    if (isInc && t.status === 'exempt') {
+      amountHtml = `<span style="color:var(--text-secondary); font-size:0.85rem;">[공제]</span> 0원`;
+    } else if (isInc && t.status === 'unpaid') {
+      amountHtml = `<span style="color:var(--danger-color); font-size:0.85rem;">[미납]</span> 0원`;
+    }
+
     return `
     <tr>
       <td><span class="badge badge-${isInc ? 'success' : 'danger'}" style="${!isInc ? 'background:rgba(239,68,68,0.2); color:var(--danger-color);' : ''}">${isInc ? '수입' : '지출'}</span></td>
+      <td>${t.date}</td>
+      <td>${typeHtml}</td>
       <td>
-        <div style="font-weight:500;">${t.desc}</div>
-        <div style="font-size:0.8rem; color:var(--text-secondary)">${t.type}</div>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          ${t.desc}
+          ${badgeHtml}
+        </div>
       </td>
       <td style="color: ${isInc ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight:600;">
-        ${formatCurrency(t.amount)}
+        ${amountHtml}
       </td>
       <td>${t.date}</td>
       <td class="admin-only">

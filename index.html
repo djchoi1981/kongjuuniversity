@@ -159,6 +159,9 @@
       <section id="dues" class="view">
         <div class="page-header">
           <h1>재무(수입/지출) 관리</h1>
+          <button class="btn btn-primary admin-only" id="btn-open-bulk-dues">
+            <i data-lucide="layers"></i> 월별 일괄 등록
+          </button>
         </div>
         <div class="responsive-grid" id="dues-grid">
           <!-- Admin Only: Add Transaction Form -->
@@ -212,8 +215,8 @@
 
               <!-- Common Date Field -->
               <div class="form-group">
-                <label class="form-label">일자</label>
-                <input type="date" class="input-field" id="tx-date" required>
+                <label class="form-label">납부 귀속월 (년/월)</label>
+                <input type="month" class="input-field" id="tx-date" required>
               </div>
               <button type="submit" class="btn btn-primary w-full">내역 등록</button>
             </form>
@@ -465,6 +468,40 @@
         <button type="button" class="btn btn-ghost w-full" id="btn-cancel-crop">취소</button>
         <button type="button" class="btn btn-primary w-full" id="btn-apply-crop">적용하기</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: Bulk Dues -->
+  <div id="modal-bulk-dues" class="modal-overlay" style="display: none; z-index: 1050;">
+    <div class="glass-card modal-content" style="max-width: 600px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.25rem;">회비 일괄 등록 (체크리스트)</h2>
+        <button type="button" class="btn-ghost btn-close-modal" style="padding: 0.25rem;" data-modal="modal-bulk-dues"><i data-lucide="x"></i></button>
+      </div>
+      <form id="form-bulk-dues">
+        <div class="form-group">
+          <label class="form-label">납부 귀속월 선택</label>
+          <input type="month" id="bulk-month" class="input-field" required>
+        </div>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+          <table class="data-table" style="margin: 0; width: 100%;">
+            <thead style="position: sticky; top: 0; background: var(--surface-color); z-index: 10;">
+              <tr>
+                <th>회원명</th>
+                <th>등급</th>
+                <th>상태 변경</th>
+              </tr>
+            </thead>
+            <tbody id="bulk-members-list">
+              <!-- JS Rendered -->
+            </tbody>
+          </table>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+          <button type="button" class="btn btn-ghost w-full btn-close-modal" data-modal="modal-bulk-dues">취소</button>
+          <button type="submit" class="btn btn-success w-full" style="background-color: var(--success-color); color: white; border: none; font-weight: 500;">일괄 장부 기록</button>
+        </div>
+      </form>
     </div>
   </div>
 
