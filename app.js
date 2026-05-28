@@ -69,6 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tx-date').addEventListener('change', (e) => {
     updateIncomeOptions(e.target.value);
   });
+  
+  document.getElementById('stat-year').value = new Date().getFullYear().toString();
   document.getElementById('tx-income-type').addEventListener('change', (e) => {
     const dateStr = document.getElementById('tx-date').value;
     const dues = getDuesForDate(dateStr);
@@ -159,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     settings.expenseCategories = catStr.split(',').map(s => s.trim()).filter(s => s);
     saveAllToLocal();
     alert('정책 설정이 저장되었습니다.');
-    updateFormOptions();
+    renderAll();
   });
 
   // Design Sliders Realtime
@@ -619,6 +621,7 @@ function renderAll() {
   updateFormOptions();
   renderMembers();
   renderTransactions();
+  renderDashboard();
   document.getElementById('stat-total-members').innerText = members.length + '명';
 }
 
@@ -710,17 +713,98 @@ function formatCurrency(amount) {
   return amount || '0원';
 }
 
-function renderTransactions() {
+function renderDashboard() {
+  const currentMonthPrefix = new Date().toISOString().substring(0, 7);
+  
+  let accumIncome = 0;
+  let accumExpense = 0;
+  
   const incomes = transactions.filter(t => t.kind === 'income');
   const expenses = transactions.filter(t => t.kind === 'expense');
-
-  const currentMonthPrefix = new Date().toISOString().substring(0, 7);
+  
+  incomes.forEach(t => accumIncome += t.amount);
+  expenses.forEach(t => accumExpense += Math.abs(t.amount));
+  
   const monthlyIncome = incomes.filter(t => t.date.startsWith(currentMonthPrefix)).reduce((acc, t) => acc + t.amount, 0);
   const monthlyExpense = expenses.filter(t => t.date.startsWith(currentMonthPrefix)).reduce((acc, t) => acc + Math.abs(t.amount), 0);
   
+  document.getElementById('stat-total-members').innerText = `${members.length}명`;
+  document.getElementById('stat-accum-income').innerText = formatCurrency(accumIncome);
+  document.getElementById('stat-accum-expense').innerText = formatCurrency(accumExpense);
+  document.getElementById('stat-accum-balance').innerText = formatCurrency(accumIncome - accumExpense);
   document.getElementById('stat-total-income').innerText = formatCurrency(monthlyIncome);
   document.getElementById('stat-total-expense').innerText = formatCurrency(monthlyExpense);
 
+  const recentIncomes = incomes.slice(0, 5);
+  const recentExpenses = expenses.slice(0, 5);
+  
+  document.getElementById('dashboard-recent-income').innerHTML = recentIncomes.map(t => `
+    <tr>
+      <td style="font-weight:500;">${t.desc}</td>
+      <td><span class="badge badge-${t.badge || 'member'}">${t.type}</span></td>
+      <td style="color:var(--success-color)">${formatCurrency(t.amount)}</td>
+      <td>${t.date}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('dashboard-recent-expense').innerHTML = recentExpenses.map(t => `
+    <tr>
+      <td><span class="badge" style="background:rgba(239,68,68,0.1); color:var(--danger-color)">${t.type}</span></td>
+      <td>${t.desc}</td>
+      <td style="color:var(--danger-color); font-weight:600;">${formatCurrency(Math.abs(t.amount))}</td>
+      <td>${t.date}</td>
+    </tr>
+  `).join('');
+
+  renderStatTable();
+}
+
+function renderStatTable() {
+  const year = document.getElementById('stat-year').value;
+  const tbody = document.getElementById('stat-table-body');
+  
+  let yearIncome = 0;
+  let yearExpense = 0;
+  let html = '';
+  
+  for(let i=1; i<=12; i++) {
+    const mm = i.toString().padStart(2, '0');
+    const ym = `${year}-${mm}`;
+    
+    let monthIncome = 0;
+    let monthExpense = 0;
+    
+    transactions.forEach(t => {
+      if(t.date.startsWith(ym)) {
+        if(t.kind === 'income') monthIncome += t.amount;
+        if(t.kind === 'expense') monthExpense += Math.abs(t.amount);
+      }
+    });
+    
+    yearIncome += monthIncome;
+    yearExpense += monthExpense;
+    const monthBalance = monthIncome - monthExpense;
+    
+    html += `
+      <tr>
+        <td style="text-align:center;">${i}월</td>
+        <td style="color:var(--success-color); font-weight:500;">${formatCurrency(monthIncome)}</td>
+        <td style="color:var(--danger-color); font-weight:500;">${formatCurrency(monthExpense)}</td>
+        <td style="font-weight:600;">${formatCurrency(monthBalance)}</td>
+      </tr>
+    `;
+  }
+  
+  tbody.innerHTML = html;
+  
+  document.getElementById('stat-year-income').innerText = formatCurrency(yearIncome);
+  document.getElementById('stat-year-expense').innerText = formatCurrency(yearExpense);
+  document.getElementById('stat-year-balance').innerText = formatCurrency(yearIncome - yearExpense);
+}
+
+document.getElementById('stat-year').addEventListener('change', renderStatTable);
+
+function renderTransactions() {
   const txTbody = document.getElementById('transactions-list');
   txTbody.innerHTML = transactions.map(t => {
     const isInc = t.kind === 'income';
@@ -755,15 +839,7 @@ function renderTransactions() {
     </tr>
   `}).join('');
 
-  document.getElementById('dashboard-recent-income').innerHTML = incomes.slice(0, 5).map(t => `
-    <tr>
-      <td style="font-weight:500;">${t.desc}</td>
-      <td><span class="badge badge-${t.badge || 'member'}">${t.type}</span></td>
-      <td style="color:var(--success-color)">${formatCurrency(t.amount)}</td>
-      <td>${t.date}</td>
-    </tr>
-  `).join('');
-
+  const expenses = transactions.filter(t => t.kind === 'expense');
   const expHtml = expenses.map(t => `
     <tr>
       <td><span class="badge badge-danger" style="background:rgba(239,68,68,0.2); color:var(--danger-color);">${t.type}</span></td>
@@ -773,7 +849,6 @@ function renderTransactions() {
     </tr>
   `).join('');
   
-  document.getElementById('dashboard-recent-expense').innerHTML = expHtml;
   document.getElementById('events-list').innerHTML = expHtml;
 }
 
