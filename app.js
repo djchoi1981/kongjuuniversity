@@ -783,8 +783,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  document.getElementById('form-edit-transaction').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-tx-id').value;
+    const kind = document.getElementById('edit-tx-kind').value;
+    const date = document.getElementById('edit-tx-date').value;
+    
+    const txIndex = transactions.findIndex(t => t.id === id);
+    if (txIndex > -1) {
+      const t = transactions[txIndex];
+      t.date = date;
+      
+      if (kind === 'income') {
+        const typeValue = document.getElementById('edit-tx-income-type').value;
+        const amount = parseInt(document.getElementById('edit-tx-income-amount').value, 10) || 0;
+        
+        t.type = typeValue;
+        t.amount = amount;
+        
+        if (typeValue === '공제') {
+          t.status = 'exempt';
+          t.amount = 0;
+        } else if (typeValue === '미납') {
+          t.status = 'unpaid';
+          t.amount = 0;
+        } else {
+          t.status = 'paid';
+        }
+      } else {
+        const category = document.getElementById('edit-tx-expense-category').value;
+        const desc = document.getElementById('edit-tx-expense-desc').value;
+        const amount = parseInt(document.getElementById('edit-tx-expense-amount').value, 10) || 0;
+        
+        t.type = category;
+        t.desc = desc;
+        t.amount = -Math.abs(amount); // Ensure negative
+      }
+      
+      saveAllToLocal();
+      renderAll();
+      renderMatrix();
+      document.getElementById('modal-edit-transaction').style.display = 'none';
+      alert('재무 내역이 수정되었습니다.');
+    }
+  });
+
   renderAll();
   document.getElementById('stat-total-members').innerText = members.length + '명';
+  window.renderMatrix = renderMatrix;
 
   // Load from Database in the background
   loadDataFromDatabase();
@@ -823,7 +869,43 @@ window.deleteTx = function(id) {
   if(confirm("이 재무 내역을 삭제하시겠습니까?")) {
     transactions = transactions.filter(t => t.id !== id);
     saveAllToLocal(); renderAll();
+    if (window.renderMatrix) window.renderMatrix();
   }
+};
+
+window.editTx = function(id) {
+  const t = transactions.find(tx => tx.id === id);
+  if (!t) return;
+  document.getElementById('edit-tx-id').value = t.id;
+  document.getElementById('edit-tx-kind').value = t.kind;
+  const dateInput = document.getElementById('edit-tx-date');
+  const dateLabel = document.getElementById('label-edit-tx-date');
+  if (t.kind === 'income') {
+    document.getElementById('edit-income-fields').style.display = 'block';
+    document.getElementById('edit-expense-fields').style.display = 'none';
+    document.getElementById('edit-tx-member').value = t.desc;
+    document.getElementById('edit-tx-income-type').value = t.type;
+    document.getElementById('edit-tx-income-amount').value = t.amount;
+    if (dateLabel) dateLabel.innerText = '납부 귀속월 (년/월)';
+    if (dateInput) {
+      dateInput.type = 'month';
+      dateInput.value = t.date.substring(0, 7);
+    }
+  } else {
+    document.getElementById('edit-income-fields').style.display = 'none';
+    document.getElementById('edit-expense-fields').style.display = 'block';
+    const categorySelect = document.getElementById('edit-tx-expense-category');
+    categorySelect.innerHTML = settings.expenseCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+    categorySelect.value = t.type;
+    document.getElementById('edit-tx-expense-desc').value = t.desc;
+    document.getElementById('edit-tx-expense-amount').value = Math.abs(t.amount);
+    if (dateLabel) dateLabel.innerText = '지출일자 (년/월/일)';
+    if (dateInput) {
+      dateInput.type = 'date';
+      dateInput.value = t.date;
+    }
+  }
+  document.getElementById('modal-edit-transaction').style.display = 'flex';
 };
 
 function saveAllToLocal() {
@@ -1027,6 +1109,21 @@ function formatCurrency(amount) {
   return amount || '0원';
 }
 
+function getMonthlyIncome(ym) {
+  const yearStr = ym.substring(0, 4);
+  // 1. Sum of monthly dues in this month (type != '연납')
+  const monthlyIncomes = transactions.filter(t => t.kind === 'income' && t.type !== '연납' && t.date.startsWith(ym));
+  let sum = monthlyIncomes.reduce((acc, t) => acc + (t.amount || 0), 0);
+  
+  // 2. Sum of split annual dues for this year
+  const annualIncomes = transactions.filter(t => t.kind === 'income' && t.type === '연납' && t.date.startsWith(yearStr));
+  annualIncomes.forEach(t => {
+    sum += Math.floor((t.amount || 0) / 12);
+  });
+  
+  return sum;
+}
+
 function renderDashboard() {
   const currentMonthPrefix = new Date().toISOString().substring(0, 7);
   
@@ -1039,7 +1136,7 @@ function renderDashboard() {
   incomes.forEach(t => accumIncome += t.amount);
   expenses.forEach(t => accumExpense += Math.abs(t.amount));
   
-  const monthlyIncome = incomes.filter(t => t.date.startsWith(currentMonthPrefix)).reduce((acc, t) => acc + t.amount, 0);
+  const monthlyIncome = getMonthlyIncome(currentMonthPrefix);
   const monthlyExpense = expenses.filter(t => t.date.startsWith(currentMonthPrefix)).reduce((acc, t) => acc + Math.abs(t.amount), 0);
   
   document.getElementById('stat-total-members').innerText = `${members.length}명`;
@@ -1198,12 +1295,11 @@ function renderStatTable() {
     const mm = i.toString().padStart(2, '0');
     const ym = `${year}-${mm}`;
     
-    let monthIncome = 0;
+    let monthIncome = getMonthlyIncome(ym);
     let monthExpense = 0;
     
     transactions.forEach(t => {
       if(t.date.startsWith(ym)) {
-        if(t.kind === 'income') monthIncome += t.amount;
         if(t.kind === 'expense') monthExpense += Math.abs(t.amount);
       }
     });
@@ -1287,6 +1383,7 @@ function renderTransactions() {
       </td>
       <td>${t.date}</td>
       <td class="admin-only">
+        <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem; color:var(--primary-color); margin-right: 0.25rem;" onclick="editTx('${t.id}')">수정</button>
         <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem; color:var(--danger-color)" onclick="deleteTx('${t.id}')">삭제</button>
       </td>
     </tr>

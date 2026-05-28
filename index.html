@@ -739,6 +739,70 @@
     </div>
   </div>
 
+  <!-- Modal: Edit Transaction -->
+  <div id="modal-edit-transaction" class="modal-overlay" style="display: none; z-index: 1060;">
+    <div class="glass-card modal-content" style="max-width: 400px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.25rem;">재무 내역 수정</h2>
+        <button type="button" class="btn-ghost btn-close-modal" style="padding: 0.25rem;" data-modal="modal-edit-transaction"><i data-lucide="x"></i></button>
+      </div>
+      <form id="form-edit-transaction">
+        <input type="hidden" id="edit-tx-id">
+        <input type="hidden" id="edit-tx-kind">
+        
+        <!-- Income Fields -->
+        <div id="edit-income-fields" style="display: none;">
+          <div class="form-group">
+            <label class="form-label">회원명</label>
+            <input type="text" class="input-field" id="edit-tx-member" readonly style="background:var(--surface-hover);">
+          </div>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label class="form-label">납부 유형</label>
+            <select class="input-field" id="edit-tx-income-type">
+              <option value="월납">월납</option>
+              <option value="연납">연납</option>
+              <option value="공제">공제</option>
+              <option value="미납">미납</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label class="form-label">납부 금액 (원)</label>
+            <input type="number" class="input-field" id="edit-tx-income-amount" required step="1">
+          </div>
+        </div>
+
+        <!-- Expense Fields -->
+        <div id="edit-expense-fields" style="display: none;">
+          <div class="form-group">
+            <label class="form-label">지출 카테고리</label>
+            <select class="input-field" id="edit-tx-expense-category">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label class="form-label">지출 내용</label>
+            <input type="text" class="input-field" id="edit-tx-expense-desc" required>
+          </div>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label class="form-label">지출 금액 (원)</label>
+            <input type="number" class="input-field" id="edit-tx-expense-amount" required step="1">
+          </div>
+        </div>
+
+        <!-- Common Date Field -->
+        <div class="form-group" style="margin-top: 1rem;">
+          <label class="form-label" id="label-edit-tx-date">일자</label>
+          <input type="month" class="input-field" id="edit-tx-date" required>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="button" class="btn btn-ghost w-full btn-close-modal" data-modal="modal-edit-transaction">취소</button>
+          <button type="submit" class="btn btn-primary w-full">저장하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
