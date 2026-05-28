@@ -25,7 +25,8 @@ let isAdmin = false;
 let settings = {
   monthlyDues: 10000,
   annualDiscount: 20000,
-  expenseCategories: ["결혼", "부고", "개업", "출산", "기타"],
+  incomeCategories: ["월납", "연납", "공제", "미납", "찬조금", "기타수입"],
+  expenseCategories: ["결혼", "부고", "개업", "출산", "스승의날", "박사모임", "기타"],
   logoData: null,
   logoWidth: 150,
   avatarSize: 40
@@ -65,6 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load local mock persistence
   const savedSettings = localStorage.getItem('erp_settings');
   if (savedSettings) settings = { ...settings, ...JSON.parse(savedSettings) };
+  if (!settings.incomeCategories || !Array.isArray(settings.incomeCategories)) {
+    settings.incomeCategories = ["월납", "연납", "공제", "미납", "찬조금", "기타수입"];
+  }
   
   const savedMembers = localStorage.getItem('erp_members');
   if (savedMembers) members = JSON.parse(savedMembers);
@@ -88,7 +92,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const dues = getDuesForDate(dateStr);
     const amountInput = document.getElementById('tx-income-amount');
     if(amountInput) {
-      amountInput.value = e.target.value === 'annual' ? dues.annual : dues.monthly;
+      const val = e.target.value;
+      if (val === '연납') {
+        amountInput.value = dues.annual;
+      } else if (val === '월납') {
+        amountInput.value = dues.monthly;
+      } else if (val === '공제' || val === '미납') {
+        amountInput.value = 0;
+      } else {
+        amountInput.value = '';
+      }
     }
   });
 
@@ -217,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('setting-monthly-dues').value = settings.monthlyDues;
   document.getElementById('setting-annual-discount').value = settings.annualDiscount;
   document.getElementById('setting-expense-categories').value = settings.expenseCategories.join(', ');
+  document.getElementById('setting-income-categories').value = settings.incomeCategories.join(', ');
   
   document.getElementById('setting-logo-width').value = settings.logoWidth;
   document.getElementById('setting-avatar-size').value = settings.avatarSize;
@@ -229,6 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
     settings.annualDiscount = parseInt(document.getElementById('setting-annual-discount').value);
     const catStr = document.getElementById('setting-expense-categories').value;
     settings.expenseCategories = catStr.split(',').map(s => s.trim()).filter(s => s);
+    const incStr = document.getElementById('setting-income-categories').value;
+    settings.incomeCategories = incStr.split(',').map(s => s.trim()).filter(s => s);
     saveAllToLocal();
     alert('정책 설정이 저장되었습니다.');
     renderAll();
@@ -684,21 +700,30 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       const typeValue = document.getElementById('tx-income-type').value;
-      const isAnnual = typeValue === 'annual';
       const amount = parseInt(document.getElementById('tx-income-amount').value, 10) || 0;
 
-      const newTx = {
+      let status = 'paid';
+      let finalAmount = amount;
+      if (typeValue === '공제') {
+        status = 'exempt';
+        finalAmount = 0;
+      } else if (typeValue === '미납') {
+        status = 'unpaid';
+        finalAmount = 0;
+      }
+
+      const txObj = {
         id: Date.now().toString(),
         kind: 'income',
-        type: isAnnual ? '연납' : '월납',
-        status: 'paid',
+        type: typeValue,
+        status: status,
         desc: name,
-        amount: amount,
+        amount: finalAmount,
         date: date,
         badge: mem.level.toLowerCase()
       };
       
-      transactions.unshift(newTx);
+      transactions.unshift(txObj);
       alert(`[${name}]님의 회비 수입 처리가 완료되었습니다.`);
 
     } else {
@@ -762,6 +787,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data) {
           if (data.settings) {
             settings = { ...settings, ...data.settings };
+            if (!settings.incomeCategories || !Array.isArray(settings.incomeCategories)) {
+              settings.incomeCategories = ["월납", "연납", "공제", "미납", "찬조금", "기타수입"];
+            }
             localStorage.setItem('erp_settings', JSON.stringify(settings));
           }
           if (data.members) {
@@ -789,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const kind = document.getElementById('edit-tx-kind').value;
     const date = document.getElementById('edit-tx-date').value;
     
-    const txIndex = transactions.findIndex(t => t.id === id);
+    const txIndex = transactions.findIndex(t => String(t.id) === String(id));
     if (txIndex > -1) {
       const t = transactions[txIndex];
       t.date = date;
@@ -874,7 +902,7 @@ window.deleteTx = function(id) {
 };
 
 window.editTx = function(id) {
-  const t = transactions.find(tx => tx.id === id);
+  const t = transactions.find(tx => String(tx.id) === String(id));
   if (!t) return;
   document.getElementById('edit-tx-id').value = t.id;
   document.getElementById('edit-tx-kind').value = t.kind;
@@ -883,8 +911,16 @@ window.editTx = function(id) {
   if (t.kind === 'income') {
     document.getElementById('edit-income-fields').style.display = 'block';
     document.getElementById('edit-expense-fields').style.display = 'none';
+    
+    // Toggle required fields to prevent HTML5 validation block
+    document.getElementById('edit-tx-income-amount').required = true;
+    document.getElementById('edit-tx-expense-desc').required = false;
+    document.getElementById('edit-tx-expense-amount').required = false;
+    
     document.getElementById('edit-tx-member').value = t.desc;
-    document.getElementById('edit-tx-income-type').value = t.type;
+    const typeSelect = document.getElementById('edit-tx-income-type');
+    typeSelect.innerHTML = settings.incomeCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+    typeSelect.value = t.type;
     document.getElementById('edit-tx-income-amount').value = t.amount;
     if (dateLabel) dateLabel.innerText = '납부 귀속월 (년/월)';
     if (dateInput) {
@@ -894,6 +930,12 @@ window.editTx = function(id) {
   } else {
     document.getElementById('edit-income-fields').style.display = 'none';
     document.getElementById('edit-expense-fields').style.display = 'block';
+    
+    // Toggle required fields to prevent HTML5 validation block
+    document.getElementById('edit-tx-income-amount').required = false;
+    document.getElementById('edit-tx-expense-desc').required = true;
+    document.getElementById('edit-tx-expense-amount').required = true;
+    
     const categorySelect = document.getElementById('edit-tx-expense-category');
     categorySelect.innerHTML = settings.expenseCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
     categorySelect.value = t.type;
@@ -945,6 +987,9 @@ async function loadDataFromDatabase() {
     if (data) {
       if (data.settings) {
         settings = { ...settings, ...data.settings };
+        if (!settings.incomeCategories || !Array.isArray(settings.incomeCategories)) {
+          settings.incomeCategories = ["월납", "연납", "공제", "미납", "찬조금", "기타수입"];
+        }
         localStorage.setItem('erp_settings', JSON.stringify(settings));
       }
       if (data.members) {
@@ -1058,17 +1103,29 @@ function updateIncomeOptions(dateStr) {
   if (!incomeSelect) return;
   const dues = getDuesForDate(dateStr);
   
-  let annualText = `연납 (${dues.annual.toLocaleString()}원)`;
-  if (dues.hasDiscount) annualText += ` - 할인적용`;
-
-  incomeSelect.innerHTML = `
-    <option value="monthly">월납 (${dues.monthly.toLocaleString()}원)</option>
-    <option value="annual">${annualText}</option>
-  `;
+  incomeSelect.innerHTML = settings.incomeCategories.map(cat => {
+    if (cat === '월납') {
+      return `<option value="월납">월납 (${dues.monthly.toLocaleString()}원)</option>`;
+    } else if (cat === '연납') {
+      let annualText = `연납 (${dues.annual.toLocaleString()}원)`;
+      if (dues.hasDiscount) annualText += ` - 할인적용`;
+      return `<option value="연납">${annualText}</option>`;
+    } else {
+      return `<option value="${cat}">${cat}</option>`;
+    }
+  }).join('');
   
   const amountInput = document.getElementById('tx-income-amount');
   if(amountInput && incomeSelect) {
-    amountInput.value = incomeSelect.value === 'annual' ? dues.annual : dues.monthly;
+    if (incomeSelect.value === '연납') {
+      amountInput.value = dues.annual;
+    } else if (incomeSelect.value === '월납') {
+      amountInput.value = dues.monthly;
+    } else if (incomeSelect.value === '공제' || incomeSelect.value === '미납') {
+      amountInput.value = 0;
+    } else {
+      amountInput.value = '';
+    }
   }
 }
 
@@ -1476,7 +1533,10 @@ function importFromExcel() {
           // Preserve logoData
           newSettings.logoData = settings.logoData;
           if(typeof newSettings.expenseCategories === 'string') {
-             newSettings.expenseCategories = newSettings.expenseCategories.split(',');
+             newSettings.expenseCategories = newSettings.expenseCategories.split(',').map(s => s.trim()).filter(s => s);
+          }
+          if(typeof newSettings.incomeCategories === 'string') {
+             newSettings.incomeCategories = newSettings.incomeCategories.split(',').map(s => s.trim()).filter(s => s);
           }
           settings = { ...settings, ...newSettings };
         }
