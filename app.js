@@ -65,6 +65,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tx-date').valueAsDate = new Date();
   document.getElementById('member-joindate').valueAsDate = new Date();
 
+  // Update dynamic income options when date changes
+  document.getElementById('tx-date').addEventListener('change', (e) => {
+    updateIncomeOptions(e.target.value);
+  });
+
   // Navigation Logic
   const links = document.querySelectorAll('.nav-links-container .nav-link');
   const views = document.querySelectorAll('.view');
@@ -330,7 +335,8 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const typeValue = document.getElementById('tx-income-type').value;
       const isAnnual = typeValue === 'annual';
-      const amount = isAnnual ? (settings.monthlyDues * 12) - settings.annualDiscount : settings.monthlyDues;
+      const dues = getDuesForDate(date);
+      const amount = isAnnual ? dues.annual : dues.monthly;
 
       newTx.type = isAnnual ? '연납' : '월납';
       newTx.desc = name;
@@ -462,16 +468,35 @@ function updateFormOptions() {
   const datalist = document.getElementById('members-datalist');
   datalist.innerHTML = members.map(m => `<option value="${m.name}">`).join('');
 
-  const incomeSelect = document.getElementById('tx-income-type');
-  const monthly = settings.monthlyDues;
-  const annualTotal = (monthly * 12) - settings.annualDiscount;
-  incomeSelect.innerHTML = `
-    <option value="monthly">월납 (${monthly.toLocaleString()}원)</option>
-    <option value="annual">연납 (${annualTotal.toLocaleString()}원) - 할인적용</option>
-  `;
+  const dateStr = document.getElementById('tx-date')?.value || new Date().toISOString().split('T')[0];
+  updateIncomeOptions(dateStr);
 
   const expenseSelect = document.getElementById('tx-expense-category');
   expenseSelect.innerHTML = settings.expenseCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+}
+
+function getDuesForDate(dateStr) {
+  if (dateStr && dateStr <= '2025-12-31') {
+    return { monthly: 20000, annual: 240000, hasDiscount: false };
+  } else {
+    const monthly = settings.monthlyDues;
+    const annual = (monthly * 12) - settings.annualDiscount;
+    return { monthly, annual, hasDiscount: settings.annualDiscount > 0 };
+  }
+}
+
+function updateIncomeOptions(dateStr) {
+  const incomeSelect = document.getElementById('tx-income-type');
+  if (!incomeSelect) return;
+  const dues = getDuesForDate(dateStr);
+  
+  let annualText = `연납 (${dues.annual.toLocaleString()}원)`;
+  if (dues.hasDiscount) annualText += ` - 할인적용`;
+
+  incomeSelect.innerHTML = `
+    <option value="monthly">월납 (${dues.monthly.toLocaleString()}원)</option>
+    <option value="annual">${annualText}</option>
+  `;
 }
 
 function renderMembers() {
