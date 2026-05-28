@@ -318,7 +318,12 @@
               <!-- Expense Fields (Hidden by default) -->
               <div id="expense-fields" style="display: none;">
                 <div class="form-group">
-                  <label class="form-label">지출 카테고리 (필터)</label>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <label class="form-label" style="margin-bottom: 0;">지출 카테고리 (필터)</label>
+                    <button type="button" class="btn btn-ghost admin-only" id="btn-manage-expense-categories" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; display: flex; align-items: center; gap: 0.25rem; background: var(--surface-hover); border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                      <i data-lucide="settings" style="width: 12px; height: 12px;"></i> 관리
+                    </button>
+                  </div>
                   <select class="input-field" id="tx-expense-category">
                     <!-- Dynamically populated from settings -->
                   </select>
@@ -805,6 +810,32 @@
           <button type="submit" class="btn btn-primary w-full">저장하기</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: Manage Expense Categories -->
+  <div id="modal-manage-expense-categories" class="modal-overlay" style="display: none; z-index: 1070;">
+    <div class="glass-card modal-content" style="max-width: 350px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.25rem;">지출 카테고리 관리</h2>
+        <button type="button" class="btn-ghost btn-close-modal" style="padding: 0.25rem;" data-modal="modal-manage-expense-categories"><i data-lucide="x"></i></button>
+      </div>
+      <div>
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+          <input type="text" class="input-field" id="new-expense-category-input" placeholder="새 카테고리명 입력...">
+          <button type="button" class="btn btn-primary" id="btn-add-expense-category" style="white-space: nowrap; padding: 0.5rem 1rem;">추가</button>
+        </div>
+        
+        <label class="form-label" style="margin-bottom: 0.5rem; display: block;">현재 카테고리 목록</label>
+        <ul id="expense-category-list" style="list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem;">
+          <!-- JS dynamic list items with name and delete button -->
+        </ul>
+        
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="button" class="btn btn-ghost w-full btn-close-modal" data-modal="modal-manage-expense-categories">닫기</button>
+          <button type="button" class="btn btn-primary w-full" id="btn-save-expense-categories">저장 및 적용</button>
+        </div>
+      </div>
     </div>
   </div>
 

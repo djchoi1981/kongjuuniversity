@@ -754,6 +754,63 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('export-excel-btn').addEventListener('click', exportToExcel);
   document.getElementById('import-excel-btn').addEventListener('click', importFromExcel);
 
+  // --- EXPENSE CATEGORY MANAGEMENT ---
+  let tempExpenseCategories = [];
+
+  function renderTempExpenseCategories() {
+    const listContainer = document.getElementById('expense-category-list');
+    if (!listContainer) return;
+    listContainer.innerHTML = tempExpenseCategories.map((cat, idx) => `
+      <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--surface-hover); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <span>${cat}</span>
+        <button type="button" class="btn btn-ghost" style="padding: 0.25rem; color: var(--danger-color); height: auto; min-height: auto;" onclick="window.deleteTempExpenseCategory(${idx})">
+          <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+        </button>
+      </li>
+    `).join('');
+    lucide.createIcons();
+  }
+
+  window.deleteTempExpenseCategory = function(index) {
+    tempExpenseCategories.splice(index, 1);
+    renderTempExpenseCategories();
+  };
+
+  document.getElementById('btn-manage-expense-categories').addEventListener('click', () => {
+    tempExpenseCategories = [...settings.expenseCategories];
+    renderTempExpenseCategories();
+    document.getElementById('modal-manage-expense-categories').style.display = 'flex';
+  });
+
+  document.getElementById('btn-add-expense-category').addEventListener('click', () => {
+    const input = document.getElementById('new-expense-category-input');
+    const newCat = input.value.trim();
+    if (newCat) {
+      if (!tempExpenseCategories.includes(newCat)) {
+        tempExpenseCategories.push(newCat);
+        input.value = '';
+        renderTempExpenseCategories();
+      } else {
+        alert('이미 존재하는 카테고리입니다.');
+      }
+    }
+  });
+
+  document.getElementById('btn-save-expense-categories').addEventListener('click', () => {
+    settings.expenseCategories = [...tempExpenseCategories];
+    
+    const settingsInput = document.getElementById('setting-expense-categories');
+    if (settingsInput) {
+      settingsInput.value = settings.expenseCategories.join(', ');
+    }
+    
+    saveAllToLocal();
+    renderAll();
+    
+    document.getElementById('modal-manage-expense-categories').style.display = 'none';
+    alert('지출 카테고리가 변경되었습니다.');
+  });
+
   // Cloud Manual Sync
   document.getElementById('btn-cloud-upload').addEventListener('click', async () => {
     if (!db) {
