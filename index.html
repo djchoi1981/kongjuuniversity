@@ -127,7 +127,7 @@
       <section id="members" class="view">
         <div class="page-header">
           <h1>회원 관리</h1>
-          <button class="btn btn-primary admin-only" onclick="alert('회원 추가 로직을 연결할 수 있습니다.')">
+          <button class="btn btn-primary admin-only" id="btn-open-add-member">
             <i data-lucide="plus"></i> 회원 추가
           </button>
         </div>
@@ -160,12 +160,12 @@
           <!-- Admin Only: Add Dues Form -->
           <div class="glass-card h-fit admin-only" id="dues-form-card">
             <h2 class="section-title">납부 등록</h2>
-            <form onsubmit="event.preventDefault(); alert('납부가 처리되었습니다.');">
+            <form id="add-payment-form">
               <div class="form-group">
-                <label class="form-label">회원 검색</label>
+                <label class="form-label">회원 이름 (검색)</label>
                 <div class="input-with-icon">
                   <i data-lucide="search" class="input-icon"></i>
-                  <input type="text" class="input-field pl-icon" placeholder="이름으로 검색...">
+                  <input type="text" class="input-field pl-icon" id="payment-member-name" placeholder="회원 이름 입력..." required>
                 </div>
               </div>
               <div class="form-group">
@@ -176,7 +176,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label">납부 일자</label>
-                <input type="date" class="input-field" id="payment-date">
+                <input type="date" class="input-field" id="payment-date" required>
               </div>
               <button type="submit" class="btn btn-primary w-full">납부 처리</button>
             </form>
@@ -209,7 +209,7 @@
       <section id="events" class="view">
         <div class="page-header">
           <h1>회원 경조사 관리</h1>
-          <button class="btn btn-primary admin-only" onclick="alert('경조사 추가 로직을 연결할 수 있습니다.')">
+          <button class="btn btn-primary admin-only" id="btn-open-add-event">
             <i data-lucide="plus"></i> 일정 추가
           </button>
         </div>
@@ -282,6 +282,75 @@
 
     </main>
   </div>
+
+  <!-- Modal: Add Member -->
+  <div id="modal-add-member" class="modal-overlay" style="display: none;">
+    <div class="glass-card modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.25rem;">새 회원 추가</h2>
+        <button type="button" class="btn-ghost btn-close-modal" style="padding: 0.25rem;" data-modal="modal-add-member"><i data-lucide="x"></i></button>
+      </div>
+      <form id="form-add-member">
+        <div class="form-group">
+          <label class="form-label">이름</label>
+          <input type="text" id="member-name" class="input-field" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">등급</label>
+          <select id="member-level" class="input-field">
+            <option value="Member">일반 (Member)</option>
+            <option value="VIP">특별회원 (VIP)</option>
+            <option value="Admin">관리자 (Admin)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">연락처</label>
+          <input type="text" id="member-phone" class="input-field" placeholder="010-0000-0000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">가입일</label>
+          <input type="date" id="member-joindate" class="input-field" required>
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="button" class="btn btn-ghost w-full btn-close-modal" data-modal="modal-add-member">취소</button>
+          <button type="submit" class="btn btn-primary w-full">추가하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Add Event -->
+  <div id="modal-add-event" class="modal-overlay" style="display: none;">
+    <div class="glass-card modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.25rem;">새 경조사 추가</h2>
+        <button type="button" class="btn-ghost btn-close-modal" style="padding: 0.25rem;" data-modal="modal-add-event"><i data-lucide="x"></i></button>
+      </div>
+      <form id="form-add-event">
+        <div class="form-group">
+          <label class="form-label">분류 (예: 결혼, 부고, 개업)</label>
+          <input type="text" id="event-type" class="input-field" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">대상자</label>
+          <input type="text" id="event-target" class="input-field" placeholder="예: 홍길동 회원 장남" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">상세 내용 (장소 등)</label>
+          <input type="text" id="event-details" class="input-field">
+        </div>
+        <div class="form-group">
+          <label class="form-label">일자</label>
+          <input type="date" id="event-date" class="input-field" required>
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="button" class="btn btn-ghost w-full btn-close-modal" data-modal="modal-add-event">취소</button>
+          <button type="submit" class="btn btn-primary w-full">추가하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- type="module" is required for Firebase ES modules -->
   <script type="module" src="app.js"></script>
 </body>

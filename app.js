@@ -63,6 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
   
   document.getElementById('payment-date').valueAsDate = new Date();
+  document.getElementById('member-joindate').valueAsDate = new Date();
+  document.getElementById('event-date').valueAsDate = new Date();
 
   // Navigation Logic
   const links = document.querySelectorAll('.nav-links-container .nav-link');
@@ -127,6 +129,96 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('export-excel-btn').addEventListener('click', exportToExcel);
   document.getElementById('import-excel-btn').addEventListener('click', importFromExcel);
 
+  // Modal Toggles
+  document.getElementById('btn-open-add-member').addEventListener('click', () => {
+    document.getElementById('modal-add-member').style.display = 'flex';
+  });
+  document.getElementById('btn-open-add-event').addEventListener('click', () => {
+    document.getElementById('modal-add-event').style.display = 'flex';
+  });
+  
+  document.querySelectorAll('.btn-close-modal').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const modalId = btn.getAttribute('data-modal');
+      document.getElementById(modalId).style.display = 'none';
+    });
+  });
+
+  // ADD MEMBER Logic
+  document.getElementById('form-add-member').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const newMember = {
+      id: Date.now().toString(),
+      name: document.getElementById('member-name').value,
+      level: document.getElementById('member-level').value,
+      phone: document.getElementById('member-phone').value,
+      joinDate: document.getElementById('member-joindate').value
+    };
+    members.push(newMember);
+    saveAllToLocal();
+    renderAll();
+    document.getElementById('modal-add-member').style.display = 'none';
+    e.target.reset();
+    document.getElementById('member-joindate').valueAsDate = new Date();
+    alert(`[${newMember.name}] 회원이 추가되었습니다!`);
+  });
+
+  // ADD PAYMENT Logic
+  document.getElementById('add-payment-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('payment-member-name').value;
+    const typeValue = document.getElementById('payment-type').value;
+    const date = document.getElementById('payment-date').value;
+    
+    // Find if member exists to get badge level
+    const member = members.find(m => m.name.includes(name));
+    const badge = member ? member.level.toLowerCase() : 'member';
+
+    const isAnnual = typeValue === 'annual';
+    const amount = isAnnual ? (settings.monthlyDues * 12) - settings.annualDiscount : settings.monthlyDues;
+    const discount = isAnnual ? settings.annualDiscount : 0;
+    
+    const newPayment = {
+      id: Date.now().toString(),
+      name: name,
+      type: isAnnual ? '연납' : '월납',
+      amount: amount,
+      discount: discount,
+      date: date,
+      badge: badge
+    };
+    
+    payments.unshift(newPayment); // add to top
+    saveAllToLocal();
+    renderAll();
+    
+    document.getElementById('payment-member-name').value = '';
+    alert(`[${name}]님의 회비가 정상 처리되었습니다!`);
+  });
+
+  // ADD EVENT Logic
+  document.getElementById('form-add-event').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const targetName = document.getElementById('event-target').value;
+    
+    const newEvent = {
+      id: Date.now().toString(),
+      type: document.getElementById('event-type').value,
+      target: targetName,
+      details: document.getElementById('event-details').value,
+      date: document.getElementById('event-date').value,
+      badge: 'member' // Default for now
+    };
+    
+    eventsData.push(newEvent);
+    saveAllToLocal();
+    renderAll();
+    document.getElementById('modal-add-event').style.display = 'none';
+    e.target.reset();
+    document.getElementById('event-date').valueAsDate = new Date();
+    alert(`경조사 일정이 추가되었습니다!`);
+  });
+
   // Init Data Rendering
   renderAll();
 });
@@ -159,6 +251,22 @@ function updatePaymentOptions() {
   `;
 }
 
+window.deleteMember = function(id) {
+  if(confirm("정말로 이 회원을 삭제하시겠습니까?")) {
+    members = members.filter(m => m.id !== id);
+    saveAllToLocal();
+    renderAll();
+  }
+};
+
+window.deleteEvent = function(id) {
+  if(confirm("정말로 이 경조사를 삭제하시겠습니까?")) {
+    eventsData = eventsData.filter(e => e.id !== id);
+    saveAllToLocal();
+    renderAll();
+  }
+};
+
 function renderMembers() {
   const tbody = document.getElementById('members-list');
   tbody.innerHTML = members.map(m => `
@@ -168,8 +276,8 @@ function renderMembers() {
       <td style="color:var(--text-secondary)">${m.phone}</td>
       <td style="color:var(--text-secondary)">${m.joinDate}</td>
       <td class="admin-only">
-        <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem;" onclick="alert('수정')">수정</button>
-        <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem; color:var(--danger-color)" onclick="alert('삭제')">삭제</button>
+        <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem;" onclick="alert('수정 기능 준비중')">수정</button>
+        <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem; color:var(--danger-color)" onclick="deleteMember('${m.id}')">삭제</button>
       </td>
     </tr>
   `).join('');
@@ -206,7 +314,7 @@ function renderEvents() {
       <td style="color:var(--text-secondary)">${e.details}</td>
       <td>${e.date}</td>
       <td class="admin-only">
-        <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem; color:var(--danger-color)" onclick="alert('삭제')">삭제</button>
+        <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem; color:var(--danger-color)" onclick="deleteEvent('${e.id}')">삭제</button>
       </td>
     </tr>
   `).join('');
@@ -235,23 +343,18 @@ function exportToExcel() {
   
   const wb = XLSX.utils.book_new();
 
-  // Sheet 1: Members
   const wsMembers = XLSX.utils.json_to_sheet(members);
   XLSX.utils.book_append_sheet(wb, wsMembers, "회원목록");
 
-  // Sheet 2: Payments
   const wsPayments = XLSX.utils.json_to_sheet(payments);
   XLSX.utils.book_append_sheet(wb, wsPayments, "납부내역");
 
-  // Sheet 3: Events
   const wsEvents = XLSX.utils.json_to_sheet(eventsData);
   XLSX.utils.book_append_sheet(wb, wsEvents, "경조사");
 
-  // Sheet 4: Settings
   const wsSettings = XLSX.utils.json_to_sheet([settings]);
   XLSX.utils.book_append_sheet(wb, wsSettings, "환경설정");
 
-  // Download
   XLSX.writeFile(wb, `박사모임_ERP_데이터백업_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
@@ -278,33 +381,24 @@ function importFromExcel() {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, {type: 'array'});
 
-      // Parse Members
       if(workbook.Sheets["회원목록"]) {
-        members = XLSX.utils.sheet_to_json(workbook.Sheets["회원목록"]);
+        members = XLSX.utils.sheet_to_json(workbook.Sheets["회원목록"]).map(m => ({...m, id: m.id ? String(m.id) : Date.now().toString()}));
       }
-      
-      // Parse Payments
       if(workbook.Sheets["납부내역"]) {
         payments = XLSX.utils.sheet_to_json(workbook.Sheets["납부내역"]);
       }
-      
-      // Parse Events
       if(workbook.Sheets["경조사"]) {
-        eventsData = XLSX.utils.sheet_to_json(workbook.Sheets["경조사"]);
+        eventsData = XLSX.utils.sheet_to_json(workbook.Sheets["경조사"]).map(e => ({...e, id: e.id ? String(e.id) : Date.now().toString()}));
       }
-
-      // Parse Settings
       if(workbook.Sheets["환경설정"]) {
         const parsedSettings = XLSX.utils.sheet_to_json(workbook.Sheets["환경설정"]);
-        if(parsedSettings.length > 0) {
-          settings = { ...settings, ...parsedSettings[0] };
-        }
+        if(parsedSettings.length > 0) settings = { ...settings, ...parsedSettings[0] };
       }
 
       saveAllToLocal();
       renderAll();
       alert("엑셀 데이터 덮어쓰기가 완료되었습니다!");
-      fileInput.value = ""; // clear input
+      fileInput.value = ""; 
       
     } catch(err) {
       console.error(err);
