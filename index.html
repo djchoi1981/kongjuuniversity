@@ -286,13 +286,13 @@
                 </div>
                 <div class="form-group">
                   <label class="form-label">지출 금액 (원)</label>
-                  <input type="number" class="input-field" id="tx-expense-amount" placeholder="예: 100000" step="1000">
+                  <input type="number" class="input-field" id="tx-expense-amount" placeholder="예: 100000" step="1">
                 </div>
               </div>
 
               <!-- Common Date Field -->
               <div class="form-group">
-                <label class="form-label">납부 귀속월 (년/월)</label>
+                <label class="form-label" id="label-tx-date">납부 귀속월 (년/월)</label>
                 <input type="month" class="input-field" id="tx-date" required>
               </div>
               <button type="submit" class="btn btn-primary w-full">내역 등록</button>
@@ -398,11 +398,11 @@
             <form id="settings-form">
               <div class="form-group">
                 <label class="form-label">월 기본 회비 (원)</label>
-                <input type="number" class="input-field" id="setting-monthly-dues" value="10000" step="1000">
+                <input type="number" class="input-field" id="setting-monthly-dues" value="10000" step="1">
               </div>
               <div class="form-group" style="margin-top: 1.5rem;">
                 <label class="form-label">연납 할인액 (원)</label>
-                <input type="number" class="input-field" id="setting-annual-discount" value="20000" step="1000">
+                <input type="number" class="input-field" id="setting-annual-discount" value="20000" step="1">
               </div>
               <div class="form-group" style="margin-top: 1.5rem;">
                 <label class="form-label">지출(경조사) 카테고리 필터</label>

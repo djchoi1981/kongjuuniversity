@@ -180,6 +180,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const txRadios = document.querySelectorAll('input[name="tx-kind"]');
   txRadios.forEach(radio => {
     radio.addEventListener('change', (e) => {
+      const dateInput = document.getElementById('tx-date');
+      const labelTxDate = document.getElementById('label-tx-date');
+      
       if (e.target.value === 'income') {
         document.getElementById('income-fields').style.display = 'block';
         document.getElementById('group-income-amount').style.display = 'block';
@@ -187,6 +190,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('tx-income-amount').required = true;
         document.getElementById('tx-expense-desc').required = false;
         document.getElementById('tx-expense-amount').required = false;
+        
+        if (labelTxDate) labelTxDate.innerText = '납부 귀속월 (년/월)';
+        if (dateInput) {
+          dateInput.type = 'month';
+          dateInput.value = new Date().toISOString().substring(0, 7);
+        }
       } else {
         document.getElementById('income-fields').style.display = 'none';
         document.getElementById('group-income-amount').style.display = 'none';
@@ -194,6 +203,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('tx-income-amount').required = false;
         document.getElementById('tx-expense-desc').required = true;
         document.getElementById('tx-expense-amount').required = true;
+        
+        if (labelTxDate) labelTxDate.innerText = '지출일자 (년/월/일)';
+        if (dateInput) {
+          dateInput.type = 'date';
+          dateInput.value = new Date().toISOString().substring(0, 10);
+        }
       }
     });
   });
@@ -362,6 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
           row += `<td style="background: var(--surface-hover); color: var(--text-secondary); font-size: 0.8rem;">해당없음</td>`;
         } else {
           const tx = transactions.find(t => t.kind === 'income' && t.desc === m.name && t.date === cellYm && t.type !== '연납');
+          const monthlyDues = getDuesForDate(cellYm).monthly;
           
           let cellHtml = '';
           let cellClass = 'matrix-cell';
@@ -372,9 +388,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tx.status === 'exempt') {
               cellHtml = `<span class="badge" style="background:var(--surface-hover); color:var(--text-secondary)">공제</span>`;
             } else if (tx.status === 'unpaid') {
-              cellHtml = `<span class="badge" style="background:rgba(239,68,68,0.1); color:var(--danger-color)">미납</span>`;
+              cellHtml = `<span class="badge" style="background:rgba(239,68,68,0.1); color:var(--danger-color); font-size:0.75rem;">부족 (-${monthlyDues.toLocaleString()})</span>`;
             } else {
-              cellHtml = `<span class="badge badge-success">완료</span>`;
+              const paidAmount = tx.amount || 0;
+              const shortage = monthlyDues - paidAmount;
+              if (shortage > 0) {
+                cellHtml = `<span class="badge" style="background:rgba(245,158,11,0.1); color:#d97706; font-size:0.75rem;">부족 (-${shortage.toLocaleString()})</span>`;
+              } else {
+                cellHtml = `<span class="badge badge-success">완료</span>`;
+              }
             }
           } else if (annualTx) {
             // Covered by annual payment
@@ -382,6 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cellHtml = `<span class="badge" style="background:rgba(59,130,246,0.1); color:var(--primary-color)">연납</span>`;
           } else {
             statusAttr = `data-txid="" data-status="none"`;
+            cellHtml = `<span class="badge" style="background:rgba(239,68,68,0.05); color:var(--text-secondary); font-size:0.75rem;">부족 (-${monthlyDues.toLocaleString()})</span>`;
           }
           
           row += `<td class="${cellClass}" data-member="${m.name}" data-ym="${cellYm}" ${statusAttr} style="cursor:pointer; transition: background 0.2s;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background=''">
