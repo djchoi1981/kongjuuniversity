@@ -86,6 +86,49 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Dues Pagination & Sorting Event Listeners
+  document.getElementById('dues-sort').addEventListener('change', (e) => {
+    duesSortMode = e.target.value;
+    duesPage = 1;
+    renderTransactions();
+  });
+  document.getElementById('dues-prev-btn').addEventListener('click', () => {
+    if (duesPage > 1) {
+      duesPage--;
+      renderTransactions();
+    }
+  });
+  document.getElementById('dues-next-btn').addEventListener('click', () => {
+    const sorted = sortTransactions(transactions, duesSortMode);
+    const totalPages = Math.max(1, Math.ceil(sorted.length / duesPageSize));
+    if (duesPage < totalPages) {
+      duesPage++;
+      renderTransactions();
+    }
+  });
+
+  // Events Pagination & Sorting Event Listeners
+  document.getElementById('events-sort').addEventListener('change', (e) => {
+    eventsSortMode = e.target.value;
+    eventsPage = 1;
+    renderTransactions();
+  });
+  document.getElementById('events-prev-btn').addEventListener('click', () => {
+    if (eventsPage > 1) {
+      eventsPage--;
+      renderTransactions();
+    }
+  });
+  document.getElementById('events-next-btn').addEventListener('click', () => {
+    const expenses = transactions.filter(t => t.kind === 'expense');
+    const sorted = sortTransactions(expenses, eventsSortMode);
+    const totalPages = Math.max(1, Math.ceil(sorted.length / eventsPageSize));
+    if (eventsPage < totalPages) {
+      eventsPage++;
+      renderTransactions();
+    }
+  });
+
   // Auth Toggle
   const authBtn = document.getElementById('auth-btn');
   authBtn.addEventListener('click', (e) => {
@@ -597,6 +640,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     saveAllToLocal();
+    duesPage = 1;
+    eventsPage = 1;
     renderAll();
     
     document.getElementById('tx-member').value = '';
@@ -877,9 +922,35 @@ function renderStatTable() {
 
 document.getElementById('stat-year').addEventListener('change', renderStatTable);
 
+function sortTransactions(list, sortMode) {
+  return [...list].sort((a, b) => {
+    if (sortMode === 'date-desc') {
+      return b.date.localeCompare(a.date) || b.id.localeCompare(a.id);
+    } else if (sortMode === 'date-asc') {
+      return a.date.localeCompare(b.date) || a.id.localeCompare(b.id);
+    } else if (sortMode === 'amount-desc') {
+      return Math.abs(b.amount) - Math.abs(a.amount);
+    } else if (sortMode === 'amount-asc') {
+      return Math.abs(a.amount) - Math.abs(b.amount);
+    }
+    return 0;
+  });
+}
+
 function renderTransactions() {
+  // 1. Render Dues (Transactions List)
   const txTbody = document.getElementById('transactions-list');
-  txTbody.innerHTML = transactions.map(t => {
+  const sortedDues = sortTransactions(transactions, duesSortMode);
+  const totalDuesItems = sortedDues.length;
+  const totalDuesPages = Math.max(1, Math.ceil(totalDuesItems / duesPageSize));
+  
+  if (duesPage > totalDuesPages) duesPage = totalDuesPages;
+  if (duesPage < 1) duesPage = 1;
+  
+  const startDuesIdx = (duesPage - 1) * duesPageSize;
+  const paginatedDues = sortedDues.slice(startDuesIdx, startDuesIdx + duesPageSize);
+
+  txTbody.innerHTML = paginatedDues.map(t => {
     const isInc = t.kind === 'income';
     let typeHtml = t.type;
     let badgeHtml = t.badge ? `<span class="badge badge-${t.badge}">${t.badge}</span>` : '';
@@ -912,8 +983,23 @@ function renderTransactions() {
     </tr>
   `}).join('');
 
+  document.getElementById('dues-page-info').innerText = `페이지 ${duesPage} / ${totalDuesPages} (총 ${totalDuesItems}건)`;
+  document.getElementById('dues-prev-btn').disabled = (duesPage === 1);
+  document.getElementById('dues-next-btn').disabled = (duesPage === totalDuesPages);
+
+  // 2. Render Events (Expenses List)
   const expenses = transactions.filter(t => t.kind === 'expense');
-  const expHtml = expenses.map(t => `
+  const sortedEvents = sortTransactions(expenses, eventsSortMode);
+  const totalEventsItems = sortedEvents.length;
+  const totalEventsPages = Math.max(1, Math.ceil(totalEventsItems / eventsPageSize));
+  
+  if (eventsPage > totalEventsPages) eventsPage = totalEventsPages;
+  if (eventsPage < 1) eventsPage = 1;
+  
+  const startEventsIdx = (eventsPage - 1) * eventsPageSize;
+  const paginatedEvents = sortedEvents.slice(startEventsIdx, startEventsIdx + eventsPageSize);
+
+  const expHtml = paginatedEvents.map(t => `
     <tr>
       <td><span class="badge badge-danger" style="background:rgba(239,68,68,0.2); color:var(--danger-color);">${t.type}</span></td>
       <td style="font-weight:500;">${t.desc}</td>
@@ -923,6 +1009,10 @@ function renderTransactions() {
   `).join('');
   
   document.getElementById('events-list').innerHTML = expHtml;
+
+  document.getElementById('events-page-info').innerText = `페이지 ${eventsPage} / ${totalEventsPages} (총 ${totalEventsItems}건)`;
+  document.getElementById('events-prev-btn').disabled = (eventsPage === 1);
+  document.getElementById('events-next-btn').disabled = (eventsPage === totalEventsPages);
 }
 
 // === EXCEL EXPORT & IMPORT ===
