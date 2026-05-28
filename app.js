@@ -1,21 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCsarv8R9l6S2QDc-a0gIWC2qvaFoNNvD4",
-  authDomain: "kongjuuniversity.firebaseapp.com",
-  databaseURL: "https://kongjuuniversity-default-rtdb.firebaseio.com",
-  projectId: "kongjuuniversity",
-  storageBucket: "kongjuuniversity.firebasestorage.app",
-  messagingSenderId: "849101630489",
-  appId: "1:849101630489:web:e2a604b9474a8aeab7ce88",
-  measurementId: "G-SZX9JN7B4Y"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+// Local Persistence Setup (Firebase omitted for file:// CORS compatibility)
 
 // State
 let isAdmin = false;
@@ -126,17 +109,17 @@ document.addEventListener('DOMContentLoaded', () => {
   txRadios.forEach(radio => {
     radio.addEventListener('change', (e) => {
       if (e.target.value === 'income') {
-        document.getElementById('group-income-type').style.display = 'block';
+        document.getElementById('income-fields').style.display = 'block';
         document.getElementById('group-income-amount').style.display = 'block';
         document.getElementById('expense-fields').style.display = 'none';
-        document.getElementById('tx-member-group').style.display = 'block';
+        document.getElementById('tx-income-amount').required = true;
         document.getElementById('tx-expense-desc').required = false;
         document.getElementById('tx-expense-amount').required = false;
       } else {
-        document.getElementById('group-income-type').style.display = 'none';
+        document.getElementById('income-fields').style.display = 'none';
         document.getElementById('group-income-amount').style.display = 'none';
         document.getElementById('expense-fields').style.display = 'block';
-        document.getElementById('tx-member-group').style.display = 'none';
+        document.getElementById('tx-income-amount').required = false;
         document.getElementById('tx-expense-desc').required = true;
         document.getElementById('tx-expense-amount').required = true;
       }
@@ -294,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let html = '';
     sortedMembers.forEach(m => {
       let row = `<tr><td style="position: sticky; left: 0; background: var(--surface-color); font-weight:500; border-right: 1px solid var(--border-color); z-index: 11;">${m.name}</td>`;
-      const joinYm = m.joindate ? m.joindate.substring(0, 7) : '0000-00';
+      const joinYm = m.joinDate ? m.joinDate.substring(0, 7) : '0000-00';
       
       for(let i=1; i<=12; i++) {
         const mm = i.toString().padStart(2, '0');
