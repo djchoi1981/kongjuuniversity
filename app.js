@@ -123,6 +123,11 @@ document.addEventListener('DOMContentLoaded', () => {
       link.classList.add('active');
       views.forEach(v => v.classList.remove('active-view'));
       document.getElementById(targetId).classList.add('active-view');
+      
+      // Update charts when dashboard becomes active/visible
+      if (targetId === 'dashboard') {
+        updateDashboardCharts();
+      }
     });
   });
 
@@ -1513,33 +1518,39 @@ function updateDashboardCharts() {
   // Filter transactions based on selected year
   let filteredTx = transactions;
   if (filterVal !== 'total') {
-    filteredTx = transactions.filter(t => t.date.startsWith(filterVal));
+    filteredTx = transactions.filter(t => t.date && t.date.startsWith(filterVal));
   }
 
   // Group incomes
   const incomeTx = filteredTx.filter(t => t.kind === 'income');
   const incomeDataMap = {};
-  settings.incomeCategories.forEach(cat => {
-    incomeDataMap[cat] = 0;
-  });
+  if (settings.incomeCategories && Array.isArray(settings.incomeCategories)) {
+    settings.incomeCategories.forEach(cat => {
+      incomeDataMap[cat] = 0;
+    });
+  }
   incomeTx.forEach(t => {
     if (incomeDataMap[t.type] === undefined) {
       incomeDataMap[t.type] = 0;
     }
-    incomeDataMap[t.type] += (t.amount || 0);
+    const val = parseInt(t.amount, 10);
+    incomeDataMap[t.type] += (isNaN(val) ? 0 : val);
   });
 
   // Group expenses
   const expenseTx = filteredTx.filter(t => t.kind === 'expense');
   const expenseDataMap = {};
-  settings.expenseCategories.forEach(cat => {
-    expenseDataMap[cat] = 0;
-  });
+  if (settings.expenseCategories && Array.isArray(settings.expenseCategories)) {
+    settings.expenseCategories.forEach(cat => {
+      expenseDataMap[cat] = 0;
+    });
+  }
   expenseTx.forEach(t => {
     if (expenseDataMap[t.type] === undefined) {
       expenseDataMap[t.type] = 0;
     }
-    expenseDataMap[t.type] += Math.abs(t.amount || 0);
+    const val = parseInt(t.amount, 10);
+    expenseDataMap[t.type] += Math.abs(isNaN(val) ? 0 : val);
   });
 
   // Prepare Income Data for Chart
@@ -1562,6 +1573,19 @@ function updateDashboardCharts() {
     }
   });
 
+  let debugHtml = `진단 정보:\n` +
+    `- Chart.js 정의 상태: ${typeof Chart !== 'undefined' ? '성공 (typeof=' + typeof Chart + ')' : '실패'}\n` +
+    `- 전체 트랜잭션 개수: ${transactions.length}개\n` +
+    `- 필터 조건: ${filterVal}\n` +
+    `- 필터링된 트랜잭션 개수: ${filteredTx.length}개\n` +
+    `- 수입 분류별 합계: ${JSON.stringify(incomeDataMap)}\n` +
+    `- 지출 분류별 합계: ${JSON.stringify(expenseDataMap)}\n` +
+    `- 수입 차트 데이터: labels=${JSON.stringify(incomeLabels)}, values=${JSON.stringify(incomeValues)}\n` +
+    `- 지출 차트 데이터: labels=${JSON.stringify(expenseLabels)}, values=${JSON.stringify(expenseValues)}`;
+
+  let hasError = false;
+  let chartError = '';
+
   // Render Income Chart
   const incomeCanvas = document.getElementById('income-pie-chart');
   const incomeEmpty = document.getElementById('income-chart-empty');
@@ -1576,58 +1600,63 @@ function updateDashboardCharts() {
     } else {
       incomeCanvas.style.display = 'block';
       if (incomeEmpty) incomeEmpty.style.display = 'none';
-      const ctx = incomeCanvas.getContext('2d');
-      incomeChartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: incomeLabels,
-          datasets: [{
-            data: incomeValues,
-            backgroundColor: [
-              '#3b82f6', // blue
-              '#10b981', // green
-              '#f59e0b', // amber
-              '#ec4899', // pink
-              '#8b5cf6', // purple
-              '#06b6d4', // cyan
-              '#f43f5e', // rose
-              '#14b8a6'  // teal
-            ],
-            borderWidth: 1,
-            borderColor: 'rgba(255, 255, 255, 0.1)'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: {
-                color: '#94a3b8',
-                font: {
-                  size: 11
-                },
-                padding: 10
-              }
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  let label = context.label || '';
-                  if (label) {
-                    label += ': ';
+      try {
+        const ctx = incomeCanvas.getContext('2d');
+        incomeChartInstance = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: incomeLabels,
+            datasets: [{
+              data: incomeValues,
+              backgroundColor: [
+                '#3b82f6', // blue
+                '#10b981', // green
+                '#f59e0b', // amber
+                '#ec4899', // pink
+                '#8b5cf6', // purple
+                '#06b6d4', // cyan
+                '#f43f5e', // rose
+                '#14b8a6'  // teal
+              ],
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.1)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  color: '#94a3b8',
+                  font: {
+                    size: 11
+                  },
+                  padding: 10
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    let label = context.label || '';
+                    if (label) {
+                      label += ': ';
+                    }
+                    if (context.parsed !== undefined) {
+                      label += context.parsed.toLocaleString() + '원';
+                    }
+                    return label;
                   }
-                  if (context.parsed !== undefined) {
-                    label += context.parsed.toLocaleString() + '원';
-                  }
-                  return label;
                 }
               }
             }
           }
-        }
-      });
+        });
+      } catch (err) {
+        hasError = true;
+        chartError += `수입 차트 생성 실패: ${err.message}\n${err.stack}\n`;
+      }
     }
   }
 
@@ -1645,58 +1674,78 @@ function updateDashboardCharts() {
     } else {
       expenseCanvas.style.display = 'block';
       if (expenseEmpty) expenseEmpty.style.display = 'none';
-      const ctx = expenseCanvas.getContext('2d');
-      expenseChartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: expenseLabels,
-          datasets: [{
-            data: expenseValues,
-            backgroundColor: [
-              '#ef4444', // red
-              '#f97316', // orange
-              '#f59e0b', // amber
-              '#84cc16', // lime
-              '#10b981', // emerald
-              '#ec4899', // pink
-              '#a855f7', // purple
-              '#64748b'  // slate
-            ],
-            borderWidth: 1,
-            borderColor: 'rgba(255, 255, 255, 0.1)'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: {
-                color: '#94a3b8',
-                font: {
-                  size: 11
-                },
-                padding: 10
-              }
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  let label = context.label || '';
-                  if (label) {
-                    label += ': ';
+      try {
+        const ctx = expenseCanvas.getContext('2d');
+        expenseChartInstance = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: expenseLabels,
+            datasets: [{
+              data: expenseValues,
+              backgroundColor: [
+                '#ef4444', // red
+                '#f97316', // orange
+                '#f59e0b', // amber
+                '#84cc16', // lime
+                '#10b981', // emerald
+                '#ec4899', // pink
+                '#a855f7', // purple
+                '#64748b'  // slate
+              ],
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.1)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  color: '#94a3b8',
+                  font: {
+                    size: 11
+                  },
+                  padding: 10
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    let label = context.label || '';
+                    if (label) {
+                      label += ': ';
+                    }
+                    if (context.parsed !== undefined) {
+                      label += context.parsed.toLocaleString() + '원';
+                    }
+                    return label;
                   }
-                  if (context.parsed !== undefined) {
-                    label += context.parsed.toLocaleString() + '원';
-                  }
-                  return label;
                 }
               }
             }
           }
-        }
-      });
+        });
+      } catch (err) {
+        hasError = true;
+        chartError += `지출 차트 생성 실패: ${err.message}\n${err.stack}\n`;
+      }
+    }
+  }
+
+  const debugInfoEl = document.getElementById('chart-debug-info');
+  if (debugInfoEl) {
+    if (hasError) {
+      debugInfoEl.style.background = 'rgba(239, 68, 68, 0.1)';
+      debugInfoEl.style.color = '#ef4444';
+      debugInfoEl.style.border = '1px solid #ef4444';
+      debugInfoEl.innerText = `${debugHtml}\n\n[오류 로그]\n${chartError}`;
+    } else {
+      debugInfoEl.style.background = 'rgba(255,255,255,0.03)';
+      debugInfoEl.style.color = 'var(--text-secondary)';
+      debugInfoEl.style.border = '1px solid var(--border-color)';
+      debugInfoEl.innerText = debugHtml;
     }
   }
 }

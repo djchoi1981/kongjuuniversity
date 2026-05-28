@@ -6,7 +6,7 @@
   <title>공주대 박사모임 회비관리 ERP</title>
   <link rel="stylesheet" href="style.css">
   <script>
-    window.addEventListener('error', function(e) {
+    function showErrorBanner(message) {
       const errorDiv = document.createElement('div');
       errorDiv.style.position = 'fixed';
       errorDiv.style.top = '0';
@@ -18,8 +18,40 @@
       errorDiv.style.zIndex = '99999';
       errorDiv.style.fontSize = '0.875rem';
       errorDiv.style.fontFamily = 'monospace';
-      errorDiv.innerText = 'JS Error: ' + e.message + ' (' + e.filename + ':' + e.lineno + ')';
-      document.body.appendChild(errorDiv);
+      errorDiv.style.whiteSpace = 'pre-wrap';
+      errorDiv.innerText = message;
+      
+      const closeBtn = document.createElement('button');
+      closeBtn.innerText = '✕';
+      closeBtn.style.position = 'absolute';
+      closeBtn.style.right = '1rem';
+      closeBtn.style.top = '50%';
+      closeBtn.style.transform = 'translateY(-50%)';
+      closeBtn.style.background = 'transparent';
+      closeBtn.style.border = 'none';
+      closeBtn.style.color = 'white';
+      closeBtn.style.fontSize = '1.2rem';
+      closeBtn.style.cursor = 'pointer';
+      closeBtn.onclick = function() { errorDiv.remove(); };
+      errorDiv.appendChild(closeBtn);
+      
+      if (document.body) {
+        document.body.appendChild(errorDiv);
+      } else {
+        window.addEventListener('DOMContentLoaded', () => {
+          document.body.appendChild(errorDiv);
+        });
+      }
+    }
+
+    window.addEventListener('error', function(e) {
+      showErrorBanner('JS Error: ' + e.message + ' (' + e.filename + ':' + e.lineno + ')');
+    });
+
+    window.addEventListener('unhandledrejection', function(e) {
+      const reason = e.reason || 'Unknown promise rejection';
+      const msg = reason.stack ? reason.stack : reason.message || reason;
+      showErrorBanner('Unhandled Promise Rejection: ' + msg);
     });
   </script>
   <script src="lucide.min.js"></script>
@@ -170,6 +202,10 @@
               </div>
               <div id="expense-chart-empty" style="display: none; color: var(--text-secondary); font-size: 0.875rem; margin-top: 1rem;">해당 기간의 지출 내역이 없습니다.</div>
             </div>
+          </div>
+          <!-- Diagnostic Debug Info (Subtle and easy to remove later) -->
+          <div id="chart-debug-info" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 1.5rem; text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            진단 정보를 확인하는 중...
           </div>
         </div>
 
