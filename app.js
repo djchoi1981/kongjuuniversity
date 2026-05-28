@@ -14,7 +14,7 @@ let db = null;
 try {
   if (typeof firebase !== 'undefined') {
     firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
+    db = firebase.database();
   }
 } catch (e) {
   console.warn("Firebase initialization skipped:", e);
@@ -676,8 +676,8 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAll();
   document.getElementById('stat-total-members').innerText = members.length + '명';
 
-  // Load from Firestore in the background
-  loadDataFromFirestore();
+  // Load from Database in the background
+  loadDataFromDatabase();
 });
 
 // Edit/Delete globals
@@ -727,49 +727,17 @@ function saveAllToLocal() {
   renderLogo();
 
   // Background Cloud Sync
-  syncAllToFirestore();
+  syncAllToDatabase();
 }
 
-async function syncAllToFirestore() {
+async function syncAllToDatabase() {
   if (!db) return;
   try {
-    // 1. Sync Settings
-    await db.collection("settings").doc("main").set(settings);
-
-    // 2. Sync Members
-    const membersSnapshot = await db.collection("members").get();
-    const batch = db.batch();
-    
-    // Delete removed members
-    membersSnapshot.forEach(doc => {
-      if (!members.find(m => m.id === doc.id)) {
-        batch.delete(doc.ref);
-      }
+    await db.ref("/").set({
+      settings: settings,
+      members: members,
+      transactions: transactions
     });
-    
-    // Set current members
-    members.forEach(m => {
-      const data = { ...m };
-      delete data.id;
-      batch.set(db.collection("members").doc(m.id), data);
-    });
-
-    // 3. Sync Transactions
-    const txSnapshot = await db.collection("transactions").get();
-    // Delete removed transactions
-    txSnapshot.forEach(doc => {
-      if (!transactions.find(t => t.id === doc.id)) {
-        batch.delete(doc.ref);
-      }
-    });
-    // Set current transactions
-    transactions.forEach(t => {
-      const data = { ...t };
-      delete data.id;
-      batch.set(db.collection("transactions").doc(t.id), data);
-    });
-
-    await batch.commit();
     console.log("Cloud sync successful.");
   } catch (error) {
     console.error("Cloud sync failed:", error);
@@ -777,43 +745,30 @@ async function syncAllToFirestore() {
   }
 }
 
-async function loadDataFromFirestore() {
+async function loadDataFromDatabase() {
   if (!db) return;
   try {
-    // 1. Load Settings
-    const settingsDoc = await db.collection("settings").doc("main").get();
-    if (settingsDoc.exists) {
-      settings = { ...settings, ...settingsDoc.data() };
-      localStorage.setItem('erp_settings', JSON.stringify(settings));
-    }
-    
-    // 2. Load Members
-    const membersSnapshot = await db.collection("members").get();
-    const loadedMembers = [];
-    membersSnapshot.forEach(doc => {
-      loadedMembers.push({ id: doc.id, ...doc.data() });
-    });
-    if (loadedMembers.length > 0) {
-      members = loadedMembers;
-      localStorage.setItem('erp_members', JSON.stringify(members));
-    }
-
-    // 3. Load Transactions
-    const txSnapshot = await db.collection("transactions").get();
-    const loadedTx = [];
-    txSnapshot.forEach(doc => {
-      loadedTx.push({ id: doc.id, ...doc.data() });
-    });
-    if (loadedTx.length > 0) {
-      transactions = loadedTx;
-      localStorage.setItem('erp_transactions', JSON.stringify(transactions));
-    }
-    
-    renderAll();
-    // Refresh payment matrix if open
-    const matrixModal = document.getElementById('modal-matrix');
-    if (matrixModal && matrixModal.style.display === 'flex') {
-      renderMatrix();
+    const snapshot = await db.ref("/").once("value");
+    const data = snapshot.val();
+    if (data) {
+      if (data.settings) {
+        settings = { ...settings, ...data.settings };
+        localStorage.setItem('erp_settings', JSON.stringify(settings));
+      }
+      if (data.members) {
+        members = data.members;
+        localStorage.setItem('erp_members', JSON.stringify(members));
+      }
+      if (data.transactions) {
+        transactions = data.transactions;
+        localStorage.setItem('erp_transactions', JSON.stringify(transactions));
+      }
+      renderAll();
+      // Refresh payment matrix if open
+      const matrixModal = document.getElementById('modal-matrix');
+      if (matrixModal && matrixModal.style.display === 'flex') {
+        renderMatrix();
+      }
     }
     console.log("Cloud data loaded successfully.");
   } catch (error) {
