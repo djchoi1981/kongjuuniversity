@@ -769,6 +769,14 @@ async function loadDataFromDatabase() {
       if (matrixModal && matrixModal.style.display === 'flex') {
         renderMatrix();
       }
+    } else {
+      // Database is empty (null). Initialize with local data if it exists.
+      const hasLocalMembers = localStorage.getItem('erp_members');
+      const hasLocalTx = localStorage.getItem('erp_transactions');
+      if (hasLocalMembers || hasLocalTx) {
+        console.log("Database is empty, but local data exists. Initializing cloud database with local data...");
+        syncAllToDatabase();
+      }
     }
     console.log("Cloud data loaded successfully.");
   } catch (error) {
