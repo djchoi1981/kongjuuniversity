@@ -773,6 +773,7 @@ async function syncAllToFirestore() {
     console.log("Cloud sync successful.");
   } catch (error) {
     console.error("Cloud sync failed:", error);
+    alert(`클라우드 동기화 실패: ${error.message || error.code || error}`);
   }
 }
 
@@ -817,6 +818,12 @@ async function loadDataFromFirestore() {
     console.log("Cloud data loaded successfully.");
   } catch (error) {
     console.error("Cloud load failed:", error);
+    const modeBadge = document.getElementById('mode-badge');
+    if (modeBadge) {
+      modeBadge.innerText = `클라우드 연동 실패 (${error.message || error.code || error})`;
+      modeBadge.style.backgroundColor = 'rgba(239,68,68,0.15)';
+      modeBadge.style.color = 'var(--danger-color)';
+    }
   }
 }
 
