@@ -163,6 +163,24 @@ document.addEventListener('DOMContentLoaded', () => {
     alert(`[${newMember.name}] 회원이 추가되었습니다!`);
   });
 
+  // EDIT MEMBER Logic
+  document.getElementById('form-edit-member').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-member-id').value;
+    const memberIndex = members.findIndex(m => m.id === id);
+    if(memberIndex > -1) {
+      members[memberIndex].name = document.getElementById('edit-member-name').value;
+      members[memberIndex].level = document.getElementById('edit-member-level').value;
+      members[memberIndex].phone = document.getElementById('edit-member-phone').value;
+      members[memberIndex].joinDate = document.getElementById('edit-member-joindate').value;
+      
+      saveAllToLocal();
+      renderAll();
+      document.getElementById('modal-edit-member').style.display = 'none';
+      alert('회원 정보가 성공적으로 수정되었습니다.');
+    }
+  });
+
   // ADD PAYMENT Logic
   document.getElementById('add-payment-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -223,6 +241,35 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAll();
 });
 
+// Edit Member globally available
+window.editMember = function(id) {
+  const member = members.find(m => m.id === id);
+  if(!member) return;
+  document.getElementById('edit-member-id').value = member.id;
+  document.getElementById('edit-member-name').value = member.name;
+  document.getElementById('edit-member-level').value = member.level;
+  document.getElementById('edit-member-phone').value = member.phone || '';
+  document.getElementById('edit-member-joindate').value = member.joinDate;
+  
+  document.getElementById('modal-edit-member').style.display = 'flex';
+};
+
+window.deleteMember = function(id) {
+  if(confirm("정말로 이 회원을 삭제하시겠습니까?")) {
+    members = members.filter(m => m.id !== id);
+    saveAllToLocal();
+    renderAll();
+  }
+};
+
+window.deleteEvent = function(id) {
+  if(confirm("정말로 이 경조사를 삭제하시겠습니까?")) {
+    eventsData = eventsData.filter(e => e.id !== id);
+    saveAllToLocal();
+    renderAll();
+  }
+};
+
 function saveAllToLocal() {
   localStorage.setItem('erp_settings', JSON.stringify(settings));
   localStorage.setItem('erp_members', JSON.stringify(members));
@@ -251,22 +298,6 @@ function updatePaymentOptions() {
   `;
 }
 
-window.deleteMember = function(id) {
-  if(confirm("정말로 이 회원을 삭제하시겠습니까?")) {
-    members = members.filter(m => m.id !== id);
-    saveAllToLocal();
-    renderAll();
-  }
-};
-
-window.deleteEvent = function(id) {
-  if(confirm("정말로 이 경조사를 삭제하시겠습니까?")) {
-    eventsData = eventsData.filter(e => e.id !== id);
-    saveAllToLocal();
-    renderAll();
-  }
-};
-
 function renderMembers() {
   const tbody = document.getElementById('members-list');
   tbody.innerHTML = members.map(m => `
@@ -275,9 +306,9 @@ function renderMembers() {
       <td><span class="badge badge-${(m.level||'member').toLowerCase()}">${m.level}</span></td>
       <td style="color:var(--text-secondary)">${m.phone}</td>
       <td style="color:var(--text-secondary)">${m.joinDate}</td>
-      <td class="admin-only">
-        <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem;" onclick="alert('수정 기능 준비중')">수정</button>
-        <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem; color:var(--danger-color)" onclick="deleteMember('${m.id}')">삭제</button>
+      <td>
+        <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem;" onclick="editMember('${m.id}')">수정</button>
+        <button class="btn btn-ghost admin-only" style="padding:0.25rem 0.5rem; font-size:0.875rem; color:var(--danger-color)" onclick="deleteMember('${m.id}')">삭제</button>
       </td>
     </tr>
   `).join('');

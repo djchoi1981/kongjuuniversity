@@ -140,7 +140,8 @@
                   <th>등급</th>
                   <th>연락처</th>
                   <th>가입일</th>
-                  <th class="admin-only">관리</th>
+                  <!-- 일반 모드에서도 수정 버튼이 보여야 하므로 admin-only 제거 -->
+                  <th>관리</th>
                 </tr>
               </thead>
               <tbody id="members-list">
@@ -314,6 +315,43 @@
         <div style="display: flex; gap: 1rem; margin-top: 2rem;">
           <button type="button" class="btn btn-ghost w-full btn-close-modal" data-modal="modal-add-member">취소</button>
           <button type="submit" class="btn btn-primary w-full">추가하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Member -->
+  <div id="modal-edit-member" class="modal-overlay" style="display: none;">
+    <div class="glass-card modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.25rem;">회원 정보 수정</h2>
+        <button type="button" class="btn-ghost btn-close-modal" style="padding: 0.25rem;" data-modal="modal-edit-member"><i data-lucide="x"></i></button>
+      </div>
+      <form id="form-edit-member">
+        <input type="hidden" id="edit-member-id">
+        <div class="form-group">
+          <label class="form-label">이름</label>
+          <input type="text" id="edit-member-name" class="input-field" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">등급</label>
+          <select id="edit-member-level" class="input-field">
+            <option value="Member">일반 (Member)</option>
+            <option value="VIP">특별회원 (VIP)</option>
+            <option value="Admin">관리자 (Admin)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">연락처</label>
+          <input type="text" id="edit-member-phone" class="input-field" placeholder="010-0000-0000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">가입일</label>
+          <input type="date" id="edit-member-joindate" class="input-field" required>
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="button" class="btn btn-ghost w-full btn-close-modal" data-modal="modal-edit-member">취소</button>
+          <button type="submit" class="btn btn-primary w-full">저장하기</button>
         </div>
       </form>
     </div>
