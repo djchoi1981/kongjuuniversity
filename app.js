@@ -1049,6 +1049,80 @@ function renderDashboard() {
   document.getElementById('stat-total-income').innerText = formatCurrency(monthlyIncome);
   document.getElementById('stat-total-expense').innerText = formatCurrency(monthlyExpense);
 
+  // Calculate current month unpaid members and total unpaid amount
+  const unpaidMembers = [];
+  let totalUnpaidAmount = 0;
+  
+  const monthlyDues = getDuesForDate(currentMonthPrefix).monthly;
+  const currentYearStr = currentMonthPrefix.substring(0, 4);
+
+  members.forEach(m => {
+    // Check if member joined on or before the current month
+    const joinYm = m.joinDate ? m.joinDate.substring(0, 7) : '0000-00';
+    if (joinYm <= currentMonthPrefix) {
+      // Find annual transaction for this year
+      const annualTx = transactions.find(t => t.kind === 'income' && t.desc === m.name && t.type === '연납' && t.date.startsWith(currentYearStr));
+      
+      if (!annualTx) {
+        // Find monthly transaction for this month
+        const tx = transactions.find(t => t.kind === 'income' && t.desc === m.name && t.date === currentMonthPrefix && t.type !== '연납');
+        
+        let shortage = 0;
+        if (tx) {
+          if (tx.status === 'exempt') {
+            shortage = 0;
+          } else if (tx.status === 'unpaid') {
+            shortage = monthlyDues;
+          } else {
+            shortage = Math.max(0, monthlyDues - (tx.amount || 0));
+          }
+        } else {
+          shortage = monthlyDues;
+        }
+        
+        if (shortage > 0) {
+          unpaidMembers.push({
+            member: m,
+            shortage: shortage
+          });
+          totalUnpaidAmount += shortage;
+        }
+      }
+    }
+  });
+
+  // Sort unpaid members by name
+  unpaidMembers.sort((a, b) => a.member.name.localeCompare(b.member.name));
+
+  // Render unpaid total
+  const statTotalUnpaid = document.getElementById('stat-total-unpaid');
+  if (statTotalUnpaid) statTotalUnpaid.innerText = formatCurrency(totalUnpaidAmount);
+  
+  const unpaidTotalBadge = document.getElementById('unpaid-total-badge');
+  if (unpaidTotalBadge) unpaidTotalBadge.innerText = formatCurrency(totalUnpaidAmount);
+
+  // Render unpaid members list table
+  const unpaidTbody = document.getElementById('dashboard-unpaid-list');
+  if (unpaidTbody) {
+    if (unpaidMembers.length > 0) {
+      unpaidTbody.innerHTML = unpaidMembers.map(item => {
+        const m = item.member;
+        return `
+          <tr>
+            <td style="font-weight:500;">${m.name}</td>
+            <td style="color:var(--text-secondary);">${m.job || '-'}</td>
+            <td><span class="badge badge-${(m.level || 'member').toLowerCase()}">${m.level}</span></td>
+            <td style="color:var(--text-secondary);">${m.joinDate}</td>
+            <td style="color:var(--text-secondary);">${m.phone || '-'}</td>
+            <td style="color:var(--danger-color); font-weight:600;">${formatCurrency(item.shortage)}</td>
+          </tr>
+        `;
+      }).join('');
+    } else {
+      unpaidTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-secondary); padding:2rem 0;">이번 달 미납자가 없습니다. 🎉</td></tr>`;
+    }
+  }
+
   const recentIncomes = incomes.slice(0, 5);
   const recentExpenses = expenses.slice(0, 5);
   
