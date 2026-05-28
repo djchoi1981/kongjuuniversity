@@ -114,6 +114,13 @@
               <div class="stat-value" id="stat-total-unpaid" style="color:var(--danger-color)">0원</div>
             </div>
           </div>
+          <div class="glass-card flex-center">
+            <div class="icon-box" style="background-color: rgba(239, 68, 68, 0.15); color: var(--danger-color);"><i data-lucide="alert-triangle"></i></div>
+            <div>
+              <div class="stat-label">전체 누적 미납금</div>
+              <div class="stat-value" id="stat-accum-unpaid" style="color:var(--danger-color)">0원</div>
+            </div>
+          </div>
         </div>
 
         <div class="responsive-grid">
@@ -159,9 +166,10 @@
         <!-- Current Month Unpaid Members Table -->
         <div class="glass-card" style="margin-top: 2rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-            <h2 class="section-title" style="margin-bottom:0;" id="unpaid-list-title"><i data-lucide="alert-triangle" style="width:20px; vertical-align:text-bottom; color:var(--danger-color);"></i> 이번 달 미납자 명단 (말일 기준)</h2>
-            <div style="font-size:0.9rem; color:var(--text-secondary); font-weight:500;">
-              미납금 총액: <span id="unpaid-total-badge" style="color:var(--danger-color); font-weight:700;">0원</span>
+            <h2 class="section-title" style="margin-bottom:0;" id="unpaid-list-title"><i data-lucide="alert-triangle" style="width:20px; vertical-align:text-bottom; color:var(--danger-color);"></i> 미납자 현황 및 미납금 명단 (말일 기준)</h2>
+            <div style="font-size:0.9rem; color:var(--text-secondary); font-weight:500; display:flex; gap:1rem; flex-wrap:wrap;">
+              <span>이번 달 미납: <span id="unpaid-total-badge" style="color:var(--danger-color); font-weight:700;">0원</span></span>
+              <span>누적 총 미납: <span id="unpaid-accum-badge" style="color:var(--danger-color); font-weight:700;">0원</span></span>
             </div>
           </div>
           <div class="table-responsive">
@@ -173,7 +181,8 @@
                   <th>회원 등급</th>
                   <th>가입일</th>
                   <th>연락처</th>
-                  <th>미납 금액</th>
+                  <th style="color:var(--danger-color);">이번 달 미납액</th>
+                  <th style="color:var(--danger-color); font-weight:600;">누적 미납 총액</th>
                 </tr>
               </thead>
               <tbody id="dashboard-unpaid-list">

@@ -1049,57 +1049,93 @@ function renderDashboard() {
   document.getElementById('stat-total-income').innerText = formatCurrency(monthlyIncome);
   document.getElementById('stat-total-expense').innerText = formatCurrency(monthlyExpense);
 
-  // Calculate current month unpaid members and total unpaid amount
+  // Calculate current month unpaid members, total unpaid amount, and accumulated total unpaid dues
   const unpaidMembers = [];
-  let totalUnpaidAmount = 0;
+  let totalMonthlyUnpaid = 0;
+  let totalAccumUnpaid = 0;
   
-  const monthlyDues = getDuesForDate(currentMonthPrefix).monthly;
-  const currentYearStr = currentMonthPrefix.substring(0, 4);
+  // Helper to generate months from joinDate to currentMonth
+  function getMonthsBetween(startStr, endStr) {
+    const months = [];
+    if (!startStr || !endStr) return months;
+    let startYear = parseInt(startStr.substring(0, 4));
+    let startMonth = parseInt(startStr.substring(5, 7));
+    const endYear = parseInt(endStr.substring(0, 4));
+    const endMonth = parseInt(endStr.substring(5, 7));
+    
+    let y = startYear;
+    let m = startMonth;
+    while (y < endYear || (y === endYear && m <= endMonth)) {
+      months.push(`${y}-${m.toString().padStart(2, '0')}`);
+      m++;
+      if (m > 12) {
+        m = 1;
+        y++;
+      }
+    }
+    return months;
+  }
 
   members.forEach(m => {
-    // Check if member joined on or before the current month
-    const joinYm = m.joinDate ? m.joinDate.substring(0, 7) : '0000-00';
-    if (joinYm <= currentMonthPrefix) {
-      // Find annual transaction for this year
-      const annualTx = transactions.find(t => t.kind === 'income' && t.desc === m.name && t.type === '연납' && t.date.startsWith(currentYearStr));
+    const joinYm = m.joinDate ? m.joinDate.substring(0, 7) : currentMonthPrefix;
+    const months = getMonthsBetween(joinYm, currentMonthPrefix);
+    
+    let monthlyShortage = 0;
+    let accumShortage = 0;
+    
+    months.forEach(ym => {
+      const yearStr = ym.substring(0, 4);
+      const annualTx = transactions.find(t => t.kind === 'income' && t.desc === m.name && t.type === '연납' && t.date.startsWith(yearStr));
       
+      let shortage = 0;
       if (!annualTx) {
-        // Find monthly transaction for this month
-        const tx = transactions.find(t => t.kind === 'income' && t.desc === m.name && t.date === currentMonthPrefix && t.type !== '연납');
-        
-        let shortage = 0;
+        const tx = transactions.find(t => t.kind === 'income' && t.desc === m.name && t.date === ym && t.type !== '연납');
+        const dues = getDuesForDate(ym).monthly;
         if (tx) {
           if (tx.status === 'exempt') {
             shortage = 0;
           } else if (tx.status === 'unpaid') {
-            shortage = monthlyDues;
+            shortage = dues;
           } else {
-            shortage = Math.max(0, monthlyDues - (tx.amount || 0));
+            shortage = Math.max(0, dues - (tx.amount || 0));
           }
         } else {
-          shortage = monthlyDues;
-        }
-        
-        if (shortage > 0) {
-          unpaidMembers.push({
-            member: m,
-            shortage: shortage
-          });
-          totalUnpaidAmount += shortage;
+          shortage = dues;
         }
       }
+      
+      if (ym === currentMonthPrefix) {
+        monthlyShortage = shortage;
+      }
+      accumShortage += shortage;
+    });
+    
+    if (accumShortage > 0) {
+      unpaidMembers.push({
+        member: m,
+        monthlyShortage: monthlyShortage,
+        accumShortage: accumShortage
+      });
+      totalMonthlyUnpaid += monthlyShortage;
+      totalAccumUnpaid += accumShortage;
     }
   });
 
   // Sort unpaid members by name
   unpaidMembers.sort((a, b) => a.member.name.localeCompare(b.member.name));
 
-  // Render unpaid total
+  // Render unpaid totals
   const statTotalUnpaid = document.getElementById('stat-total-unpaid');
-  if (statTotalUnpaid) statTotalUnpaid.innerText = formatCurrency(totalUnpaidAmount);
+  if (statTotalUnpaid) statTotalUnpaid.innerText = formatCurrency(totalMonthlyUnpaid);
+  
+  const statAccumUnpaid = document.getElementById('stat-accum-unpaid');
+  if (statAccumUnpaid) statAccumUnpaid.innerText = formatCurrency(totalAccumUnpaid);
   
   const unpaidTotalBadge = document.getElementById('unpaid-total-badge');
-  if (unpaidTotalBadge) unpaidTotalBadge.innerText = formatCurrency(totalUnpaidAmount);
+  if (unpaidTotalBadge) unpaidTotalBadge.innerText = formatCurrency(totalMonthlyUnpaid);
+  
+  const unpaidAccumBadge = document.getElementById('unpaid-accum-badge');
+  if (unpaidAccumBadge) unpaidAccumBadge.innerText = formatCurrency(totalAccumUnpaid);
 
   // Render unpaid members list table
   const unpaidTbody = document.getElementById('dashboard-unpaid-list');
@@ -1114,12 +1150,15 @@ function renderDashboard() {
             <td><span class="badge badge-${(m.level || 'member').toLowerCase()}">${m.level}</span></td>
             <td style="color:var(--text-secondary);">${m.joinDate}</td>
             <td style="color:var(--text-secondary);">${m.phone || '-'}</td>
-            <td style="color:var(--danger-color); font-weight:600;">${formatCurrency(item.shortage)}</td>
+            <td style="color:${item.monthlyShortage > 0 ? 'var(--danger-color)' : 'var(--text-secondary)'}; font-weight:600;">
+              ${item.monthlyShortage > 0 ? formatCurrency(item.monthlyShortage) : '완료'}
+            </td>
+            <td style="color:var(--danger-color); font-weight:700;">${formatCurrency(item.accumShortage)}</td>
           </tr>
         `;
       }).join('');
     } else {
-      unpaidTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-secondary); padding:2rem 0;">이번 달 미납자가 없습니다. 🎉</td></tr>`;
+      unpaidTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-secondary); padding:2rem 0;">미납자가 없습니다. 🎉</td></tr>`;
     }
   }
 
