@@ -38,7 +38,7 @@
           </a>
           <a href="#events" class="nav-link" data-target="events">
             <i data-lucide="calendar"></i>
-            <span>경조사 관리</span>
+            <span>경조사 현황</span>
           </a>
           <a href="#settings" class="nav-link admin-only" data-target="settings">
             <i data-lucide="settings"></i>
@@ -119,6 +119,39 @@
             <div>
               <div class="stat-label">전체 누적 미납금</div>
               <div class="stat-value" id="stat-accum-unpaid" style="color:var(--danger-color)">0원</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Income/Expense Category Breakdown (Pie/Donut Charts) -->
+        <div class="glass-card" style="margin-top: 2rem; margin-bottom: 2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <h2 class="section-title" style="margin-bottom:0;">
+              <i data-lucide="pie-chart" style="width:20px; vertical-align:text-bottom;"></i> 수입/지출 카테고리별 분포
+            </h2>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <label style="font-size:0.875rem; color:var(--text-secondary);">기간 필터:</label>
+              <select id="chart-year-filter" class="input-field" style="width: 150px; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                <option value="total">전체 기간 (총금액)</option>
+              </select>
+            </div>
+          </div>
+          <div class="responsive-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 1rem;">
+            <!-- Income breakdown chart -->
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.02); padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+              <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--success-color); font-weight: 600;">수입 카테고리 분포</h3>
+              <div style="position: relative; width: 220px; height: 220px;">
+                <canvas id="income-pie-chart"></canvas>
+              </div>
+              <div id="income-chart-empty" style="display: none; color: var(--text-secondary); font-size: 0.875rem; margin-top: 1rem;">해당 기간의 수입 내역이 없습니다.</div>
+            </div>
+            <!-- Expense breakdown chart -->
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.02); padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+              <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--danger-color); font-weight: 600;">지출 카테고리 분포</h3>
+              <div style="position: relative; width: 220px; height: 220px;">
+                <canvas id="expense-pie-chart"></canvas>
+              </div>
+              <div id="expense-chart-empty" style="display: none; color: var(--text-secondary); font-size: 0.875rem; margin-top: 1rem;">해당 기간의 지출 내역이 없습니다.</div>
             </div>
           </div>
         </div>
@@ -352,7 +385,13 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
               <h2 class="section-title" style="margin-bottom:0;">전체 재무 내역</h2>
               <div style="display:flex; gap:0.5rem; align-items:center;">
-                <label style="font-size:0.875rem; color:var(--text-secondary);">정렬:</label>
+                <label style="font-size:0.875rem; color:var(--text-secondary);">구분:</label>
+                <select id="dues-type-filter" class="input-field" style="width: 100px; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                  <option value="all">전체</option>
+                  <option value="income">수입</option>
+                  <option value="expense">지출</option>
+                </select>
+                <label style="font-size:0.875rem; color:var(--text-secondary); margin-left: 0.5rem;">정렬:</label>
                 <select id="dues-sort" class="input-field" style="width: 140px; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
                   <option value="date-desc">최근 날짜순</option>
                   <option value="date-asc">과거 날짜순</option>
@@ -366,9 +405,10 @@
                 <thead>
                   <tr>
                     <th>구분</th>
+                    <th>일자</th>
+                    <th>분류</th>
                     <th>상세내용(회원명/내역)</th>
                     <th>금액</th>
-                    <th>일자</th>
                     <th class="admin-only">관리</th>
                   </tr>
                 </thead>
@@ -839,6 +879,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

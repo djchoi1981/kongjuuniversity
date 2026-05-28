@@ -49,6 +49,10 @@ let pendingEditPhoto = null;
 let cropper = null;
 let currentCropTarget = null; // 'add' or 'edit'
 
+// Chart.js Instances
+let incomeChartInstance = null;
+let expenseChartInstance = null;
+
 // Data
 let members = [
   { id: '1', name: '홍길동', job: '교수', level: 'Admin', phone: '010-1234-5678', joinDate: '2025-01-01', photo: null },
@@ -68,6 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (savedSettings) settings = { ...settings, ...JSON.parse(savedSettings) };
   if (!settings.incomeCategories || !Array.isArray(settings.incomeCategories)) {
     settings.incomeCategories = ["월납", "연납", "공제", "미납", "찬조금", "기타수입"];
+  }
+  if (!settings.expenseCategories || !Array.isArray(settings.expenseCategories)) {
+    settings.expenseCategories = ["결혼", "부고", "개업", "출산", "스승의날", "박사모임", "기타"];
   }
   
   const savedMembers = localStorage.getItem('erp_members');
@@ -120,6 +127,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Dues Pagination & Sorting Event Listeners
+  document.getElementById('dues-type-filter').addEventListener('change', () => {
+    duesPage = 1;
+    renderTransactions();
+  });
   document.getElementById('dues-sort').addEventListener('change', (e) => {
     duesSortMode = e.target.value;
     duesPage = 1;
@@ -132,7 +143,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   document.getElementById('dues-next-btn').addEventListener('click', () => {
-    const sorted = sortTransactions(transactions, duesSortMode);
+    const typeFilter = document.getElementById('dues-type-filter')?.value || 'all';
+    let filteredTransactions = transactions;
+    if (typeFilter === 'income') {
+      filteredTransactions = transactions.filter(t => t.kind === 'income');
+    } else if (typeFilter === 'expense') {
+      filteredTransactions = transactions.filter(t => t.kind === 'expense');
+    }
+    const sorted = sortTransactions(filteredTransactions, duesSortMode);
     const totalPages = Math.max(1, Math.ceil(sorted.length / duesPageSize));
     if (duesPage < totalPages) {
       duesPage++;
@@ -847,6 +865,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!settings.incomeCategories || !Array.isArray(settings.incomeCategories)) {
               settings.incomeCategories = ["월납", "연납", "공제", "미납", "찬조금", "기타수입"];
             }
+            if (!settings.expenseCategories || !Array.isArray(settings.expenseCategories)) {
+              settings.expenseCategories = ["결혼", "부고", "개업", "출산", "스승의날", "박사모임", "기타"];
+            }
             localStorage.setItem('erp_settings', JSON.stringify(settings));
           }
           if (data.members) {
@@ -916,6 +937,11 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAll();
   document.getElementById('stat-total-members').innerText = members.length + '명';
   window.renderMatrix = renderMatrix;
+
+  // Chart year filter change listener
+  document.getElementById('chart-year-filter').addEventListener('change', () => {
+    updateDashboardCharts();
+  });
 
   // Load from Database in the background
   loadDataFromDatabase();
@@ -1046,6 +1072,9 @@ async function loadDataFromDatabase() {
         settings = { ...settings, ...data.settings };
         if (!settings.incomeCategories || !Array.isArray(settings.incomeCategories)) {
           settings.incomeCategories = ["월납", "연납", "공제", "미납", "찬조금", "기타수입"];
+        }
+        if (!settings.expenseCategories || !Array.isArray(settings.expenseCategories)) {
+          settings.expenseCategories = ["결혼", "부고", "개업", "출산", "스승의날", "박사모임", "기타"];
         }
         localStorage.setItem('erp_settings', JSON.stringify(settings));
       }
@@ -1394,6 +1423,26 @@ function renderDashboard() {
     </tr>
   `).join('');
 
+  // Populate Chart Year Filter based on transactions
+  const years = Array.from(new Set(transactions.map(t => t.date.substring(0, 4))))
+    .filter(y => /^\d{4}$/.test(y))
+    .sort((a, b) => b.localeCompare(a));
+  const chartYearFilter = document.getElementById('chart-year-filter');
+  if (chartYearFilter) {
+    const prevVal = chartYearFilter.value || 'total';
+    let optionsHtml = `<option value="total">전체 기간 (총금액)</option>`;
+    years.forEach(yr => {
+      optionsHtml += `<option value="${yr}">${yr}년</option>`;
+    });
+    chartYearFilter.innerHTML = optionsHtml;
+    if (years.includes(prevVal) || prevVal === 'total') {
+      chartYearFilter.value = prevVal;
+    } else {
+      chartYearFilter.value = 'total';
+    }
+  }
+
+  updateDashboardCharts();
   renderStatTable();
 }
 
@@ -1456,10 +1505,215 @@ function sortTransactions(list, sortMode) {
   });
 }
 
+function updateDashboardCharts() {
+  const chartYearFilter = document.getElementById('chart-year-filter');
+  if (!chartYearFilter) return;
+  const filterVal = chartYearFilter.value || 'total';
+
+  // Filter transactions based on selected year
+  let filteredTx = transactions;
+  if (filterVal !== 'total') {
+    filteredTx = transactions.filter(t => t.date.startsWith(filterVal));
+  }
+
+  // Group incomes
+  const incomeTx = filteredTx.filter(t => t.kind === 'income');
+  const incomeDataMap = {};
+  settings.incomeCategories.forEach(cat => {
+    incomeDataMap[cat] = 0;
+  });
+  incomeTx.forEach(t => {
+    if (incomeDataMap[t.type] === undefined) {
+      incomeDataMap[t.type] = 0;
+    }
+    incomeDataMap[t.type] += (t.amount || 0);
+  });
+
+  // Group expenses
+  const expenseTx = filteredTx.filter(t => t.kind === 'expense');
+  const expenseDataMap = {};
+  settings.expenseCategories.forEach(cat => {
+    expenseDataMap[cat] = 0;
+  });
+  expenseTx.forEach(t => {
+    if (expenseDataMap[t.type] === undefined) {
+      expenseDataMap[t.type] = 0;
+    }
+    expenseDataMap[t.type] += Math.abs(t.amount || 0);
+  });
+
+  // Prepare Income Data for Chart
+  const incomeLabels = [];
+  const incomeValues = [];
+  Object.keys(incomeDataMap).forEach(key => {
+    if (incomeDataMap[key] > 0) {
+      incomeLabels.push(key);
+      incomeValues.push(incomeDataMap[key]);
+    }
+  });
+
+  // Prepare Expense Data for Chart
+  const expenseLabels = [];
+  const expenseValues = [];
+  Object.keys(expenseDataMap).forEach(key => {
+    if (expenseDataMap[key] > 0) {
+      expenseLabels.push(key);
+      expenseValues.push(expenseDataMap[key]);
+    }
+  });
+
+  // Render Income Chart
+  const incomeCanvas = document.getElementById('income-pie-chart');
+  const incomeEmpty = document.getElementById('income-chart-empty');
+  if (incomeCanvas) {
+    if (incomeChartInstance) {
+      incomeChartInstance.destroy();
+      incomeChartInstance = null;
+    }
+    if (incomeValues.length === 0) {
+      incomeCanvas.style.display = 'none';
+      if (incomeEmpty) incomeEmpty.style.display = 'block';
+    } else {
+      incomeCanvas.style.display = 'block';
+      if (incomeEmpty) incomeEmpty.style.display = 'none';
+      const ctx = incomeCanvas.getContext('2d');
+      incomeChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: incomeLabels,
+          datasets: [{
+            data: incomeValues,
+            backgroundColor: [
+              '#3b82f6', // blue
+              '#10b981', // green
+              '#f59e0b', // amber
+              '#ec4899', // pink
+              '#8b5cf6', // purple
+              '#06b6d4', // cyan
+              '#f43f5e', // rose
+              '#14b8a6'  // teal
+            ],
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.1)'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: '#94a3b8',
+                font: {
+                  size: 11
+                },
+                padding: 10
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let label = context.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  if (context.parsed !== undefined) {
+                    label += context.parsed.toLocaleString() + '원';
+                  }
+                  return label;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  // Render Expense Chart
+  const expenseCanvas = document.getElementById('expense-pie-chart');
+  const expenseEmpty = document.getElementById('expense-chart-empty');
+  if (expenseCanvas) {
+    if (expenseChartInstance) {
+      expenseChartInstance.destroy();
+      expenseChartInstance = null;
+    }
+    if (expenseValues.length === 0) {
+      expenseCanvas.style.display = 'none';
+      if (expenseEmpty) expenseEmpty.style.display = 'block';
+    } else {
+      expenseCanvas.style.display = 'block';
+      if (expenseEmpty) expenseEmpty.style.display = 'none';
+      const ctx = expenseCanvas.getContext('2d');
+      expenseChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: expenseLabels,
+          datasets: [{
+            data: expenseValues,
+            backgroundColor: [
+              '#ef4444', // red
+              '#f97316', // orange
+              '#f59e0b', // amber
+              '#84cc16', // lime
+              '#10b981', // emerald
+              '#ec4899', // pink
+              '#a855f7', // purple
+              '#64748b'  // slate
+            ],
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.1)'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: '#94a3b8',
+                font: {
+                  size: 11
+                },
+                padding: 10
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let label = context.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  if (context.parsed !== undefined) {
+                    label += context.parsed.toLocaleString() + '원';
+                  }
+                  return label;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+}
+
 function renderTransactions() {
   // 1. Render Dues (Transactions List)
   const txTbody = document.getElementById('transactions-list');
-  const sortedDues = sortTransactions(transactions, duesSortMode);
+  const typeFilter = document.getElementById('dues-type-filter')?.value || 'all';
+  
+  let filteredTransactions = transactions;
+  if (typeFilter === 'income') {
+    filteredTransactions = transactions.filter(t => t.kind === 'income');
+  } else if (typeFilter === 'expense') {
+    filteredTransactions = transactions.filter(t => t.kind === 'expense');
+  }
+
+  const sortedDues = sortTransactions(filteredTransactions, duesSortMode);
   const totalDuesItems = sortedDues.length;
   const totalDuesPages = Math.max(1, Math.ceil(totalDuesItems / duesPageSize));
   
@@ -1495,7 +1749,6 @@ function renderTransactions() {
       <td style="color: ${isInc ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight:600;">
         ${amountHtml}
       </td>
-      <td>${t.date}</td>
       <td class="admin-only">
         <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem; color:var(--primary-color); margin-right: 0.25rem;" onclick="editTx('${t.id}')">수정</button>
         <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem; color:var(--danger-color)" onclick="deleteTx('${t.id}')">삭제</button>
@@ -1594,6 +1847,12 @@ function importFromExcel() {
           }
           if(typeof newSettings.incomeCategories === 'string') {
              newSettings.incomeCategories = newSettings.incomeCategories.split(',').map(s => s.trim()).filter(s => s);
+          }
+          if (!newSettings.expenseCategories || !Array.isArray(newSettings.expenseCategories)) {
+             newSettings.expenseCategories = ["결혼", "부고", "개업", "출산", "스승의날", "박사모임", "기타"];
+          }
+          if (!newSettings.incomeCategories || !Array.isArray(newSettings.incomeCategories)) {
+             newSettings.incomeCategories = ["월납", "연납", "공제", "미납", "찬조금", "기타수입"];
           }
           settings = { ...settings, ...newSettings };
         }
