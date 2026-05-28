@@ -72,7 +72,8 @@ button { cursor: pointer; font-family: inherit; }
 /* Layout */
 .app-container { display: flex; min-height: 100vh; }
 .sidebar { width: 250px; background-color: var(--surface-color); border-right: 1px solid var(--border-color); padding: 1.5rem 1rem; display: flex; flex-direction: column; }
-.sidebar-logo { font-size: 1.25rem; font-weight: 700; color: var(--primary-color); margin-bottom: 2rem; padding: 0 1rem; }
+.sidebar-logo { font-size: 1.25rem; font-weight: 700; color: var(--primary-color); margin-bottom: 2rem; padding: 0 1rem; display: flex; align-items: center; justify-content: flex-start; }
+.sidebar-logo img { object-fit: contain; } /* for uploaded logo */
 .nav-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: var(--text-secondary); border-radius: var(--radius-md); margin-bottom: 0.5rem; font-weight: 500; }
 .nav-link:hover, .nav-link.active { background-color: rgba(59, 130, 246, 0.1); color: var(--primary-color); }
 .main-content { flex: 1; padding: 2rem; overflow-y: auto; overflow-x: hidden; }
@@ -85,7 +86,7 @@ button { cursor: pointer; font-family: inherit; }
 /* Table */
 .table-responsive { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; white-space: nowrap; }
-.data-table th, .data-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+.data-table th, .data-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
 .data-table th { color: var(--text-secondary); font-weight: 500; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; }
 .data-table tr:hover { background-color: rgba(255, 255, 255, 0.02); }
 
@@ -93,6 +94,20 @@ button { cursor: pointer; font-family: inherit; }
 .badge-admin { background-color: rgba(16, 185, 129, 0.2); color: var(--success-color); }
 .badge-member { background-color: rgba(59, 130, 246, 0.2); color: var(--primary-color); }
 .badge-vip { background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+
+/* Images/Avatars */
+.member-avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: middle;
+  background-color: var(--bg-color);
+  border: 1px solid var(--border-color);
+}
+.name-with-avatar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
 
 /* Modals */
 .modal-overlay {
