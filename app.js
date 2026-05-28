@@ -427,11 +427,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (status === 'none') {
           document.getElementById('cell-action-status').value = 'paid';
           document.getElementById('cell-action-amount').value = getDuesForDate(ym).monthly;
+          document.getElementById('cell-action-amount-group').style.display = 'block';
           document.getElementById('btn-cell-delete').style.display = 'none';
         } else if (status === 'annual-paid') {
           // Editing the underlying annual transaction
           document.getElementById('cell-action-title').innerText = `[${member}] ${ym.substring(0,4)}년 연납 상태 수정`;
-          document.getElementById('cell-action-status').value = 'paid';
+          document.getElementById('cell-action-status').value = 'annual';
+          document.getElementById('cell-action-amount-group').style.display = 'block';
           document.getElementById('btn-cell-delete').style.display = 'block';
           document.getElementById('btn-cell-delete').setAttribute('data-txid', txid);
           
@@ -442,6 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('modal-cell-action').setAttribute('data-is-annual', 'true');
         } else {
           document.getElementById('cell-action-status').value = status;
+          document.getElementById('cell-action-amount-group').style.display = (status === 'exempt' || status === 'unpaid') ? 'none' : 'block';
           document.getElementById('btn-cell-delete').style.display = 'block';
           document.getElementById('btn-cell-delete').setAttribute('data-txid', txid);
           
@@ -468,11 +471,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('cell-action-month').value = `${targetYear}-01`;
         
         if (status === 'none') {
-          document.getElementById('cell-action-status').value = 'paid';
+          document.getElementById('cell-action-status').value = 'annual';
           document.getElementById('cell-action-amount').value = getDuesForDate(`${targetYear}-01`).annual;
+          document.getElementById('cell-action-amount-group').style.display = 'block';
           document.getElementById('btn-cell-delete').style.display = 'none';
         } else {
-          document.getElementById('cell-action-status').value = 'paid';
+          document.getElementById('cell-action-status').value = 'annual';
+          document.getElementById('cell-action-amount-group').style.display = 'block';
           document.getElementById('btn-cell-delete').style.display = 'block';
           document.getElementById('btn-cell-delete').setAttribute('data-txid', txid);
           
@@ -507,7 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const status = document.getElementById('cell-action-status').value;
     const amountPaid = parseInt(document.getElementById('cell-action-amount').value, 10);
     
-    const isAnnualAction = document.getElementById('modal-cell-action').getAttribute('data-is-annual') === 'true';
+    const isAnnualAction = (document.getElementById('modal-cell-action').getAttribute('data-is-annual') === 'true') || (status === 'annual');
     
     let txIndex = -1;
     if (isAnnualAction) {
@@ -518,19 +523,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     let amount = 0;
-    let statusDesc = isAnnualAction ? '연납' : '월납';
+    let statusDesc = '월납';
+    let transactionStatus = 'paid';
+    
     if (status === 'paid') {
       amount = amountPaid || 0;
+      statusDesc = '월납';
+      transactionStatus = 'paid';
+    } else if (status === 'annual') {
+      amount = amountPaid || 0;
+      statusDesc = '연납';
+      transactionStatus = 'paid';
     } else if (status === 'exempt') {
       amount = 0;
       statusDesc = '공제';
+      transactionStatus = 'exempt';
     } else if (status === 'unpaid') {
       amount = 0;
       statusDesc = '미납';
+      transactionStatus = 'unpaid';
     }
     
     if (txIndex > -1) {
-      transactions[txIndex].status = status;
+      transactions[txIndex].status = transactionStatus;
       transactions[txIndex].amount = amount;
       transactions[txIndex].type = statusDesc;
     } else {
@@ -539,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
         kind: 'income',
         type: statusDesc,
-        status: status,
+        status: transactionStatus,
         desc: memberName,
         amount: amount,
         date: targetMonth,
@@ -564,6 +579,24 @@ document.addEventListener('DOMContentLoaded', () => {
       renderMatrix();
       document.getElementById('modal-cell-action').removeAttribute('data-is-annual');
       document.getElementById('modal-cell-action').style.display = 'none';
+    }
+  });
+
+  document.getElementById('cell-action-status').addEventListener('change', (e) => {
+    const status = e.target.value;
+    const ym = document.getElementById('cell-action-month').value;
+    const amountInput = document.getElementById('cell-action-amount');
+    const amountGroup = document.getElementById('cell-action-amount-group');
+    
+    if (status === 'paid') {
+      amountGroup.style.display = 'block';
+      amountInput.value = getDuesForDate(ym).monthly;
+    } else if (status === 'annual') {
+      amountGroup.style.display = 'block';
+      amountInput.value = getDuesForDate(ym).annual;
+    } else {
+      amountGroup.style.display = 'none';
+      amountInput.value = 0;
     }
   });
 
