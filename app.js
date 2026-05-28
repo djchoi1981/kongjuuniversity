@@ -18,6 +18,13 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// State
+let isAdmin = false;
+let settings = {
+  monthlyDues: 10000,
+  annualDiscount: 20000
+};
+
 // Dummy Data
 const members = [
   { id: '1', name: '홍길동', level: 'Admin', phone: '010-1234-5678', joinDate: '2025-01-01' },
@@ -33,6 +40,12 @@ const payments = [
 
 // Initialize UI
 document.addEventListener('DOMContentLoaded', () => {
+  // Load settings from localStorage
+  const savedSettings = localStorage.getItem('erp_settings');
+  if (savedSettings) {
+    settings = JSON.parse(savedSettings);
+  }
+  
   // Init Lucide Icons
   lucide.createIcons();
   
@@ -40,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('payment-date').valueAsDate = new Date();
 
   // Navigation Logic
-  const links = document.querySelectorAll('.nav-link');
+  const links = document.querySelectorAll('.nav-links-container .nav-link');
   const views = document.querySelectorAll('.view');
 
   links.forEach(link => {
@@ -56,9 +69,70 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Auth (Admin Toggle) Logic
+  const authBtn = document.getElementById('auth-btn');
+  authBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (isAdmin) {
+      // Logout
+      isAdmin = false;
+      document.body.classList.remove('admin-mode');
+      document.getElementById('mode-badge').innerText = '일반 모드 (조회 전용)';
+      document.getElementById('auth-btn-text').innerText = '관리자 로그인';
+      
+      // If currently on settings tab, go back to dashboard
+      if (document.getElementById('settings').classList.contains('active-view')) {
+        document.querySelector('[data-target="dashboard"]').click();
+      }
+      
+      // Re-create icons to switch lock -> unlock (optional, using simple text instead)
+      alert('일반 모드로 전환되었습니다.');
+    } else {
+      // Login
+      const password = prompt("관리자 비밀번호를 입력하세요: (힌트: 1234)");
+      if (password === "1234") {
+        isAdmin = true;
+        document.body.classList.add('admin-mode');
+        document.getElementById('mode-badge').innerText = '관리자 모드';
+        document.getElementById('auth-btn-text').innerText = '로그아웃';
+        alert('관리자로 로그인되었습니다.');
+      } else if (password !== null) {
+        alert('비밀번호가 틀렸습니다.');
+      }
+    }
+  });
+
+  // Settings Save Logic
+  document.getElementById('setting-monthly-dues').value = settings.monthlyDues;
+  document.getElementById('setting-annual-discount').value = settings.annualDiscount;
+  
+  document.getElementById('settings-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    settings.monthlyDues = parseInt(document.getElementById('setting-monthly-dues').value);
+    settings.annualDiscount = parseInt(document.getElementById('setting-annual-discount').value);
+    
+    localStorage.setItem('erp_settings', JSON.stringify(settings));
+    alert('설정이 저장되었습니다.');
+    
+    updatePaymentOptions();
+  });
+
+  // Init Data
   renderMembers();
   renderPayments();
+  updatePaymentOptions();
 });
+
+function updatePaymentOptions() {
+  const select = document.getElementById('payment-type');
+  const monthly = settings.monthlyDues;
+  const annualTotal = (monthly * 12) - settings.annualDiscount;
+  
+  select.innerHTML = `
+    <option value="monthly">월납 (${monthly.toLocaleString()}원)</option>
+    <option value="annual">연납 (${annualTotal.toLocaleString()}원) - ${settings.annualDiscount.toLocaleString()}원 할인</option>
+  `;
+}
 
 function renderMembers() {
   const tbody = document.getElementById('members-list');
@@ -68,7 +142,7 @@ function renderMembers() {
       <td><span class="badge badge-${m.level.toLowerCase()}">${m.level}</span></td>
       <td style="color:var(--text-secondary)">${m.phone}</td>
       <td style="color:var(--text-secondary)">${m.joinDate}</td>
-      <td>
+      <td class="admin-only">
         <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem;" onclick="alert('수정')">수정</button>
         <button class="btn btn-ghost" style="padding:0.25rem 0.5rem; font-size:0.875rem; color:var(--danger-color)" onclick="alert('삭제')">삭제</button>
       </td>

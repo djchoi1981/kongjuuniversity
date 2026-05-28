@@ -98,10 +98,32 @@ button { cursor: pointer; font-family: inherit; }
 @media (max-width: 768px) {
   .app-container { flex-direction: column; }
   .sidebar { width: 100%; padding: 1rem; border-right: none; border-bottom: 1px solid var(--border-color); flex-direction: row; align-items: center; justify-content: space-between; }
-  .sidebar nav { display: flex; flex-direction: row; gap: 0.5rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .sidebar-logo { margin-bottom: 0; padding: 0; font-size: 1.1rem; white-space: nowrap; margin-right: 1rem; }
+  .sidebar nav { width: 100%; flex-direction: row; justify-content: space-between; }
+  .nav-links-container { display: flex; gap: 0.5rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .sidebar-logo { display: none; }
+  .sidebar-spacer { display: none !important; }
+  #auth-btn { margin-top: 0 !important; }
+  
   .nav-link { margin-bottom: 0; padding: 0.5rem 0.75rem; white-space: nowrap; }
-  .nav-link span { font-size: 0.85rem; }
+  .nav-link span { font-size: 0.85rem; display: none; }
   .main-content { padding: 1rem; }
   .responsive-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+  
+  /* In mobile, if dues-form is hidden, table should take full width naturally */
+}
+
+/* Admin Mode Toggles */
+body:not(.admin-mode) .admin-only {
+  display: none !important;
+}
+
+body.admin-mode #mode-badge {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: var(--success-color);
+  content: "관리자 모드";
+}
+
+/* Make table take full width in dues view if form is hidden */
+body:not(.admin-mode) #dues-table-card {
+  grid-column: 1 / -1;
 }

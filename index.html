@@ -14,18 +14,29 @@
       <div class="sidebar-logo">
         박사모임 ERP
       </div>
-      <nav>
-        <a href="#dashboard" class="nav-link active" data-target="dashboard">
-          <i data-lucide="layout-dashboard"></i>
-          <span>대시보드</span>
-        </a>
-        <a href="#members" class="nav-link" data-target="members">
-          <i data-lucide="users"></i>
-          <span>회원 관리</span>
-        </a>
-        <a href="#dues" class="nav-link" data-target="dues">
-          <i data-lucide="credit-card"></i>
-          <span>회비 관리</span>
+      <nav style="display: flex; flex-direction: column; height: 100%;">
+        <div class="nav-links-container">
+          <a href="#dashboard" class="nav-link active" data-target="dashboard">
+            <i data-lucide="layout-dashboard"></i>
+            <span>대시보드</span>
+          </a>
+          <a href="#members" class="nav-link" data-target="members">
+            <i data-lucide="users"></i>
+            <span>회원 관리</span>
+          </a>
+          <a href="#dues" class="nav-link" data-target="dues">
+            <i data-lucide="credit-card"></i>
+            <span>회비 관리</span>
+          </a>
+          <a href="#settings" class="nav-link admin-only" data-target="settings">
+            <i data-lucide="settings"></i>
+            <span>환경 설정</span>
+          </a>
+        </div>
+        <div class="sidebar-spacer" style="flex-grow: 1;"></div>
+        <a href="#" class="nav-link" id="auth-btn" style="margin-top: auto;">
+          <i data-lucide="lock" id="auth-icon"></i>
+          <span id="auth-btn-text">관리자 로그인</span>
         </a>
       </nav>
     </aside>
@@ -36,7 +47,10 @@
       <!-- Dashboard View -->
       <section id="dashboard" class="view active-view">
         <div class="page-header">
-          <h1>대시보드</h1>
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <h1>대시보드</h1>
+            <span class="badge badge-member" id="mode-badge">일반 모드 (조회 전용)</span>
+          </div>
         </div>
         <div class="stats-grid">
           <div class="glass-card flex-center">
@@ -85,7 +99,7 @@
       <section id="members" class="view">
         <div class="page-header">
           <h1>회원 관리</h1>
-          <button class="btn btn-primary" onclick="alert('회원 추가 로직을 연결할 수 있습니다.')">
+          <button class="btn btn-primary admin-only" onclick="alert('회원 추가 로직을 연결할 수 있습니다.')">
             <i data-lucide="plus"></i> 회원 추가
           </button>
         </div>
@@ -98,7 +112,7 @@
                   <th>등급</th>
                   <th>연락처</th>
                   <th>가입일</th>
-                  <th>관리</th>
+                  <th class="admin-only">관리</th>
                 </tr>
               </thead>
               <tbody id="members-list">
@@ -114,8 +128,9 @@
         <div class="page-header">
           <h1>회비 납부 관리</h1>
         </div>
-        <div class="responsive-grid">
-          <div class="glass-card h-fit">
+        <div class="responsive-grid" id="dues-grid">
+          <!-- Admin Only: Add Dues Form -->
+          <div class="glass-card h-fit admin-only" id="dues-form-card">
             <h2 class="section-title">납부 등록</h2>
             <form onsubmit="event.preventDefault(); alert('납부가 처리되었습니다.');">
               <div class="form-group">
@@ -128,8 +143,7 @@
               <div class="form-group">
                 <label class="form-label">납부 유형</label>
                 <select class="input-field" id="payment-type">
-                  <option value="monthly">월납 (10,000원)</option>
-                  <option value="annual">연납 (100,000원) - 2만원 할인</option>
+                  <!-- Dynamically populated from settings -->
                 </select>
               </div>
               <div class="form-group">
@@ -139,7 +153,9 @@
               <button type="submit" class="btn btn-primary w-full">납부 처리</button>
             </form>
           </div>
-          <div class="glass-card">
+          
+          <!-- General/Admin: Recent Payments Table -->
+          <div class="glass-card" id="dues-table-card">
             <h2 class="section-title">최근 납부 내역</h2>
             <div class="table-responsive">
               <table class="data-table">
@@ -158,6 +174,31 @@
               </table>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Settings View (Admin Only) -->
+      <section id="settings" class="view admin-only">
+        <div class="page-header">
+          <h1>환경 설정</h1>
+        </div>
+        <div class="glass-card" style="max-width: 600px;">
+          <h2 class="section-title">회비 정책 설정</h2>
+          <form id="settings-form">
+            <div class="form-group">
+              <label class="form-label">월 기본 회비 (원)</label>
+              <input type="number" class="input-field" id="setting-monthly-dues" value="10000" step="1000">
+              <small style="color: var(--text-secondary); display: block; margin-top: 0.25rem;">매월 납부 시 기본으로 적용될 금액입니다.</small>
+            </div>
+            <div class="form-group" style="margin-top: 1.5rem;">
+              <label class="form-label">연납 할인액 (원)</label>
+              <input type="number" class="input-field" id="setting-annual-discount" value="20000" step="1000">
+              <small style="color: var(--text-secondary); display: block; margin-top: 0.25rem;">1년(12개월) 선납 시 총액에서 깎아줄 할인 금액입니다.</small>
+            </div>
+            <div style="margin-top: 2rem;">
+              <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> 설정 저장</button>
+            </div>
+          </form>
         </div>
       </section>
 
