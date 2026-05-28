@@ -195,6 +195,13 @@
                 </div>
               </div>
 
+              <!-- Amount Field (Editable) -->
+              <div class="form-group" id="group-income-amount">
+                <label class="form-label">실 납부 금액 (원)</label>
+                <input type="number" class="input-field" id="tx-income-amount" required>
+                <small style="color:var(--text-secondary); font-size:0.75rem;">기본 규정에 맞게 자동 입력되며, 수정 가능합니다.</small>
+              </div>
+
               <!-- Expense Fields (Hidden by default) -->
               <div id="expense-fields" style="display: none;">
                 <div class="form-group">
@@ -482,6 +489,15 @@
       <div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem;">
         <label style="font-weight: 500;">조회 연도:</label>
         <select id="matrix-year" class="input-field" style="width: 120px;">
+          <option value="2016">2016년</option>
+          <option value="2017">2017년</option>
+          <option value="2018">2018년</option>
+          <option value="2019">2019년</option>
+          <option value="2020">2020년</option>
+          <option value="2021">2021년</option>
+          <option value="2022">2022년</option>
+          <option value="2023">2023년</option>
+          <option value="2024">2024년</option>
           <option value="2025">2025년</option>
           <option value="2026">2026년</option>
           <option value="2027">2027년</option>
@@ -536,6 +552,12 @@
           <option value="exempt">공제</option>
           <option value="unpaid">미납</option>
         </select>
+      </div>
+
+      <div class="form-group" id="cell-action-amount-group">
+        <label class="form-label">실 납부 금액 (원)</label>
+        <input type="number" id="cell-action-amount" class="input-field" required>
+        <small style="color:var(--text-secondary); font-size:0.75rem;">과거 회비나 일부 납부액을 직접 입력하세요.</small>
       </div>
 
       <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">

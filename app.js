@@ -69,6 +69,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tx-date').addEventListener('change', (e) => {
     updateIncomeOptions(e.target.value);
   });
+  document.getElementById('tx-income-type').addEventListener('change', (e) => {
+    const dateStr = document.getElementById('tx-date').value;
+    const dues = getDuesForDate(dateStr);
+    const amountInput = document.getElementById('tx-income-amount');
+    if(amountInput) {
+      amountInput.value = e.target.value === 'annual' ? dues.annual : dues.monthly;
+    }
+  });
 
   // Navigation Logic
   const links = document.querySelectorAll('.nav-links-container .nav-link');
@@ -116,15 +124,17 @@ document.addEventListener('DOMContentLoaded', () => {
   txRadios.forEach(radio => {
     radio.addEventListener('change', (e) => {
       if (e.target.value === 'income') {
-        document.getElementById('income-fields').style.display = 'block';
+        document.getElementById('group-income-type').style.display = 'block';
+        document.getElementById('group-income-amount').style.display = 'block';
         document.getElementById('expense-fields').style.display = 'none';
-        document.getElementById('tx-member').required = true;
+        document.getElementById('tx-member-group').style.display = 'block';
         document.getElementById('tx-expense-desc').required = false;
         document.getElementById('tx-expense-amount').required = false;
       } else {
-        document.getElementById('income-fields').style.display = 'none';
+        document.getElementById('group-income-type').style.display = 'none';
+        document.getElementById('group-income-amount').style.display = 'none';
         document.getElementById('expense-fields').style.display = 'block';
-        document.getElementById('tx-member').required = false;
+        document.getElementById('tx-member-group').style.display = 'none';
         document.getElementById('tx-expense-desc').required = true;
         document.getElementById('tx-expense-amount').required = true;
       }
@@ -333,11 +343,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (status === 'none') {
           document.getElementById('cell-action-status').value = 'paid';
+          document.getElementById('cell-action-amount').value = getDuesForDate(ym).monthly;
           document.getElementById('btn-cell-delete').style.display = 'none';
         } else {
           document.getElementById('cell-action-status').value = status;
           document.getElementById('btn-cell-delete').style.display = 'block';
           document.getElementById('btn-cell-delete').setAttribute('data-txid', txid);
+          
+          const existingTx = transactions.find(t => t.id === txid);
+          if (existingTx) {
+            document.getElementById('cell-action-amount').value = existingTx.amount;
+          }
         }
         
         document.getElementById('modal-cell-action').style.display = 'flex';
@@ -361,15 +377,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const memberName = document.getElementById('cell-action-member').value;
     const targetMonth = document.getElementById('cell-action-month').value;
     const status = document.getElementById('cell-action-status').value;
+    const amountPaid = parseInt(document.getElementById('cell-action-amount').value, 10);
     
     let txIndex = transactions.findIndex(t => t.kind === 'income' && t.desc === memberName && t.date === targetMonth);
     
-    const duesPolicy = getDuesForDate(targetMonth);
-    const amountPaid = duesPolicy.monthly;
     let amount = 0;
     let statusDesc = '월납';
     if (status === 'paid') {
-      amount = amountPaid;
+      amount = amountPaid || 0;
     } else if (status === 'exempt') {
       amount = 0;
       statusDesc = '공제';
@@ -476,8 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const typeValue = document.getElementById('tx-income-type').value;
       const isAnnual = typeValue === 'annual';
-      const dues = getDuesForDate(date);
-      const amount = isAnnual ? dues.annual : dues.monthly;
+      const amount = parseInt(document.getElementById('tx-income-amount').value, 10) || 0;
 
       const newTx = {
         id: Date.now().toString(),
@@ -652,6 +666,11 @@ function updateIncomeOptions(dateStr) {
     <option value="monthly">월납 (${dues.monthly.toLocaleString()}원)</option>
     <option value="annual">${annualText}</option>
   `;
+  
+  const amountInput = document.getElementById('tx-income-amount');
+  if(amountInput && incomeSelect) {
+    amountInput.value = incomeSelect.value === 'annual' ? dues.annual : dues.monthly;
+  }
 }
 
 function renderMembers() {
