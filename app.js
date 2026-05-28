@@ -673,6 +673,60 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('export-excel-btn').addEventListener('click', exportToExcel);
   document.getElementById('import-excel-btn').addEventListener('click', importFromExcel);
 
+  // Cloud Manual Sync
+  document.getElementById('btn-cloud-upload').addEventListener('click', async () => {
+    if (!db) {
+      alert("클라우드가 연결되어 있지 않습니다. 네트워크나 설정을 확인하세요.");
+      return;
+    }
+    if (confirm("현재 이 컴퓨터에 있는 데이터로 클라우드 데이터를 완전히 덮어씁니다. 진행하시겠습니까?")) {
+      try {
+        await db.ref("/").set({
+          settings: settings,
+          members: members,
+          transactions: transactions
+        });
+        alert("성공적으로 클라우드에 데이터를 올렸습니다!");
+        renderAll();
+      } catch (error) {
+        alert(`클라우드 업로드 실패: ${error.message || error.code || error}`);
+      }
+    }
+  });
+
+  document.getElementById('btn-cloud-download').addEventListener('click', async () => {
+    if (!db) {
+      alert("클라우드가 연결되어 있지 않습니다. 네트워크나 설정을 확인하세요.");
+      return;
+    }
+    if (confirm("클라우드에 저장된 데이터를 내려받아 이 컴퓨터의 기존 데이터를 덮어씁니다. 진행하시겠습니까?")) {
+      try {
+        const snapshot = await db.ref("/").once("value");
+        const data = snapshot.val();
+        if (data) {
+          if (data.settings) {
+            settings = { ...settings, ...data.settings };
+            localStorage.setItem('erp_settings', JSON.stringify(settings));
+          }
+          if (data.members) {
+            members = data.members;
+            localStorage.setItem('erp_members', JSON.stringify(members));
+          }
+          if (data.transactions) {
+            transactions = data.transactions;
+            localStorage.setItem('erp_transactions', JSON.stringify(transactions));
+          }
+          renderAll();
+          alert("성공적으로 클라우드 데이터를 내려받았습니다!");
+        } else {
+          alert("클라우드에 저장된 데이터가 없습니다.");
+        }
+      } catch (error) {
+        alert(`클라우드 다운로드 실패: ${error.message || error.code || error}`);
+      }
+    }
+  });
+
   renderAll();
   document.getElementById('stat-total-members').innerText = members.length + '명';
 
