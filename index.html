@@ -6,6 +6,8 @@
   <title>공주대 박사모임 회비관리 ERP</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- SheetJS for Excel Upload/Download -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -27,6 +29,10 @@
           <a href="#dues" class="nav-link" data-target="dues">
             <i data-lucide="credit-card"></i>
             <span>회비 관리</span>
+          </a>
+          <a href="#events" class="nav-link" data-target="events">
+            <i data-lucide="calendar"></i>
+            <span>경조사 관리</span>
           </a>
           <a href="#settings" class="nav-link admin-only" data-target="settings">
             <i data-lucide="settings"></i>
@@ -75,22 +81,44 @@
             </div>
           </div>
         </div>
-        <div class="glass-card">
-          <h2 class="section-title">최근 납부 내역</h2>
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>이름</th>
-                  <th>납부 유형</th>
-                  <th>금액</th>
-                  <th>납부일</th>
-                </tr>
-              </thead>
-              <tbody id="dashboard-recent-payments">
-                <!-- JS Rendered -->
-              </tbody>
-            </table>
+
+        <div class="responsive-grid">
+          <div class="glass-card">
+            <h2 class="section-title">최근 납부 내역</h2>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>이름</th>
+                    <th>납부 유형</th>
+                    <th>금액</th>
+                    <th>납부일</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-recent-payments">
+                  <!-- JS Rendered -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <h2 class="section-title">최근 및 예정 경조사</h2>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>분류</th>
+                    <th>대상자</th>
+                    <th>내용</th>
+                    <th>일자</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-recent-events">
+                  <!-- JS Rendered -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
@@ -177,28 +205,78 @@
         </div>
       </section>
 
+      <!-- Events View -->
+      <section id="events" class="view">
+        <div class="page-header">
+          <h1>회원 경조사 관리</h1>
+          <button class="btn btn-primary admin-only" onclick="alert('경조사 추가 로직을 연결할 수 있습니다.')">
+            <i data-lucide="plus"></i> 일정 추가
+          </button>
+        </div>
+        <div class="glass-card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>분류</th>
+                  <th>대상자</th>
+                  <th>상세 내용</th>
+                  <th>일자</th>
+                  <th class="admin-only">관리</th>
+                </tr>
+              </thead>
+              <tbody id="events-list">
+                <!-- JS Rendered -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <!-- Settings View (Admin Only) -->
       <section id="settings" class="view admin-only">
         <div class="page-header">
           <h1>환경 설정</h1>
         </div>
-        <div class="glass-card" style="max-width: 600px;">
-          <h2 class="section-title">회비 정책 설정</h2>
-          <form id="settings-form">
-            <div class="form-group">
-              <label class="form-label">월 기본 회비 (원)</label>
-              <input type="number" class="input-field" id="setting-monthly-dues" value="10000" step="1000">
-              <small style="color: var(--text-secondary); display: block; margin-top: 0.25rem;">매월 납부 시 기본으로 적용될 금액입니다.</small>
+        <div class="responsive-grid">
+          <div class="glass-card" style="max-width: 600px; height: fit-content;">
+            <h2 class="section-title">회비 정책 설정</h2>
+            <form id="settings-form">
+              <div class="form-group">
+                <label class="form-label">월 기본 회비 (원)</label>
+                <input type="number" class="input-field" id="setting-monthly-dues" value="10000" step="1000">
+                <small style="color: var(--text-secondary); display: block; margin-top: 0.25rem;">매월 납부 시 기본으로 적용될 금액입니다.</small>
+              </div>
+              <div class="form-group" style="margin-top: 1.5rem;">
+                <label class="form-label">연납 할인액 (원)</label>
+                <input type="number" class="input-field" id="setting-annual-discount" value="20000" step="1000">
+                <small style="color: var(--text-secondary); display: block; margin-top: 0.25rem;">1년(12개월) 선납 시 총액에서 깎아줄 할인 금액입니다.</small>
+              </div>
+              <div style="margin-top: 2rem;">
+                <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> 설정 저장</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="glass-card" style="height: fit-content;">
+            <h2 class="section-title">데이터 백업 및 복원 (엑셀)</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
+              현재 저장된 전체 데이터(회원, 납부 내역, 경조사, 설정)를 엑셀 파일로 내보내거나, 기존 엑셀 파일을 업로드하여 데이터를 덮어쓸 수 있습니다.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+              <button class="btn btn-success" id="export-excel-btn" style="background-color: var(--success-color); color: white;">
+                <i data-lucide="download"></i> 전체 데이터 엑셀 다운로드
+              </button>
+              
+              <div style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                <label class="form-label">엑셀 파일 업로드 (기존 데이터 덮어쓰기)</label>
+                <input type="file" id="import-excel-file" accept=".xlsx, .xls" class="input-field" style="margin-bottom: 0.5rem;">
+                <button class="btn btn-danger w-full" id="import-excel-btn">
+                  <i data-lucide="upload"></i> 엑셀 파일 덮어쓰기 적용
+                </button>
+              </div>
             </div>
-            <div class="form-group" style="margin-top: 1.5rem;">
-              <label class="form-label">연납 할인액 (원)</label>
-              <input type="number" class="input-field" id="setting-annual-discount" value="20000" step="1000">
-              <small style="color: var(--text-secondary); display: block; margin-top: 0.25rem;">1년(12개월) 선납 시 총액에서 깎아줄 할인 금액입니다.</small>
-            </div>
-            <div style="margin-top: 2rem;">
-              <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> 설정 저장</button>
-            </div>
-          </form>
+          </div>
         </div>
       </section>
 
