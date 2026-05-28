@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>공주대 박사모임 회비관리 ERP</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        박사모임 ERP
+      </div>
+      <nav>
+        <a href="#dashboard" class="nav-link active" data-target="dashboard">
+          <i data-lucide="layout-dashboard"></i>
+          <span>대시보드</span>
+        </a>
+        <a href="#members" class="nav-link" data-target="members">
+          <i data-lucide="users"></i>
+          <span>회원 관리</span>
+        </a>
+        <a href="#dues" class="nav-link" data-target="dues">
+          <i data-lucide="credit-card"></i>
+          <span>회비 관리</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      
+      <!-- Dashboard View -->
+      <section id="dashboard" class="view active-view">
+        <div class="page-header">
+          <h1>대시보드</h1>
+        </div>
+        <div class="stats-grid">
+          <div class="glass-card flex-center">
+            <div class="icon-box primary"><i data-lucide="users"></i></div>
+            <div>
+              <div class="stat-label">총 회원 수</div>
+              <div class="stat-value" id="stat-total-members">24명</div>
+            </div>
+          </div>
+          <div class="glass-card flex-center">
+            <div class="icon-box success"><i data-lucide="credit-card"></i></div>
+            <div>
+              <div class="stat-label">이번 달 회비 수납</div>
+              <div class="stat-value" id="stat-paid-members">18명</div>
+            </div>
+          </div>
+          <div class="glass-card flex-center">
+            <div class="icon-box danger"><i data-lucide="alert-circle"></i></div>
+            <div>
+              <div class="stat-label">미납자</div>
+              <div class="stat-value" id="stat-unpaid-members">6명</div>
+            </div>
+          </div>
+        </div>
+        <div class="glass-card">
+          <h2 class="section-title">최근 납부 내역</h2>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>납부 유형</th>
+                  <th>금액</th>
+                  <th>납부일</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-recent-payments">
+                <!-- JS Rendered -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Members View -->
+      <section id="members" class="view">
+        <div class="page-header">
+          <h1>회원 관리</h1>
+          <button class="btn btn-primary" onclick="alert('회원 추가 로직을 연결할 수 있습니다.')">
+            <i data-lucide="plus"></i> 회원 추가
+          </button>
+        </div>
+        <div class="glass-card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>등급</th>
+                  <th>연락처</th>
+                  <th>가입일</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="members-list">
+                <!-- JS Rendered -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dues View -->
+      <section id="dues" class="view">
+        <div class="page-header">
+          <h1>회비 납부 관리</h1>
+        </div>
+        <div class="responsive-grid">
+          <div class="glass-card h-fit">
+            <h2 class="section-title">납부 등록</h2>
+            <form onsubmit="event.preventDefault(); alert('납부가 처리되었습니다.');">
+              <div class="form-group">
+                <label class="form-label">회원 검색</label>
+                <div class="input-with-icon">
+                  <i data-lucide="search" class="input-icon"></i>
+                  <input type="text" class="input-field pl-icon" placeholder="이름으로 검색...">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">납부 유형</label>
+                <select class="input-field" id="payment-type">
+                  <option value="monthly">월납 (10,000원)</option>
+                  <option value="annual">연납 (100,000원) - 2만원 할인</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">납부 일자</label>
+                <input type="date" class="input-field" id="payment-date">
+              </div>
+              <button type="submit" class="btn btn-primary w-full">납부 처리</button>
+            </form>
+          </div>
+          <div class="glass-card">
+            <h2 class="section-title">최근 납부 내역</h2>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>이름</th>
+                    <th>유형</th>
+                    <th>납부액</th>
+                    <th>할인액</th>
+                    <th>일자</th>
+                  </tr>
+                </thead>
+                <tbody id="dues-recent-payments">
+                  <!-- JS Rendered -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+  <!-- type="module" is required for Firebase ES modules -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
