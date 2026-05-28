@@ -32,11 +32,15 @@ let settings = {
 let pendingAddPhoto = null;
 let pendingEditPhoto = null;
 
+// Cropper State
+let cropper = null;
+let currentCropTarget = null; // 'add' or 'edit'
+
 // Data
 let members = [
-  { id: '1', name: '홍길동', level: 'Admin', phone: '010-1234-5678', joinDate: '2025-01-01', photo: null },
-  { id: '2', name: '김철수', level: 'Member', phone: '010-9876-5432', joinDate: '2025-02-15', photo: null },
-  { id: '3', name: '이영희', level: 'VIP', phone: '010-5555-4444', joinDate: '2024-11-20', photo: null },
+  { id: '1', name: '홍길동', job: '교수', level: 'Admin', phone: '010-1234-5678', joinDate: '2025-01-01', photo: null },
+  { id: '2', name: '김철수', job: '연구원', level: 'Member', phone: '010-9876-5432', joinDate: '2025-02-15', photo: null },
+  { id: '3', name: '이영희', job: '대표', level: 'VIP', phone: '010-5555-4444', joinDate: '2024-11-20', photo: null },
 ];
 
 let transactions = [
@@ -180,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
-  // --- MODALS & PHOTO PREVIEWS ---
+  // --- MODALS & PHOTO CROPPER ---
   document.getElementById('btn-open-add-member').addEventListener('click', () => {
     pendingAddPhoto = null;
     document.getElementById('add-photo-preview').innerHTML = `<i data-lucide="user" style="color:var(--text-secondary); width:32px; height:32px;"></i>`;
@@ -195,26 +199,73 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Photo uploads
-  document.getElementById('member-photo').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      resizeImageToDataUrl(file, 200, (base64) => {
-        pendingAddPhoto = base64;
-        document.getElementById('add-photo-preview').innerHTML = `<img src="${base64}" style="width:100%; height:100%; object-fit:cover;">`;
+  // Open Cropper
+  function openCropper(file, target) {
+    currentCropTarget = target;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      document.getElementById('cropper-image').src = e.target.result;
+      document.getElementById('modal-crop-image').style.display = 'flex';
+      
+      if(cropper) { cropper.destroy(); }
+      cropper = new Cropper(document.getElementById('cropper-image'), {
+        aspectRatio: 1, // Circular crop (1:1 ratio)
+        viewMode: 1,
+        autoCropArea: 0.8,
+        dragMode: 'move',
+        cropBoxMovable: true,
+        cropBoxResizable: true,
       });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // File Inputs Trigger Cropper
+  document.getElementById('member-photo').addEventListener('change', (e) => {
+    if(e.target.files[0]) {
+      openCropper(e.target.files[0], 'add');
+      e.target.value = ''; // Reset input to allow re-selection
     }
   });
 
   document.getElementById('edit-member-photo').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      resizeImageToDataUrl(file, 200, (base64) => {
-        pendingEditPhoto = base64;
-        document.getElementById('edit-photo-preview').innerHTML = `<img src="${base64}" style="width:100%; height:100%; object-fit:cover;">`;
-      });
+    if(e.target.files[0]) {
+      openCropper(e.target.files[0], 'edit');
+      e.target.value = ''; 
     }
   });
+
+  // Cropper Action Buttons
+  document.getElementById('btn-cancel-crop').addEventListener('click', () => {
+    document.getElementById('modal-crop-image').style.display = 'none';
+    if(cropper) { cropper.destroy(); cropper = null; }
+  });
+
+  document.getElementById('btn-apply-crop').addEventListener('click', () => {
+    if(!cropper) return;
+    
+    // Get cropped canvas (resized down to 250x250 to save storage space)
+    const canvas = cropper.getCroppedCanvas({
+      width: 250,
+      height: 250,
+      imageSmoothingEnabled: true,
+      imageSmoothingQuality: 'high',
+    });
+    
+    const base64 = canvas.toDataURL('image/jpeg', 0.8); // Compress
+    
+    if (currentCropTarget === 'add') {
+      pendingAddPhoto = base64;
+      document.getElementById('add-photo-preview').innerHTML = `<img src="${base64}" style="width:100%; height:100%; object-fit:cover;">`;
+    } else if (currentCropTarget === 'edit') {
+      pendingEditPhoto = base64;
+      document.getElementById('edit-photo-preview').innerHTML = `<img src="${base64}" style="width:100%; height:100%; object-fit:cover;">`;
+    }
+    
+    document.getElementById('modal-crop-image').style.display = 'none';
+    cropper.destroy(); cropper = null;
+  });
+
 
   // ADD MEMBER Logic
   document.getElementById('form-add-member').addEventListener('submit', (e) => {
@@ -222,6 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const newMember = {
       id: Date.now().toString(),
       name: document.getElementById('member-name').value,
+      job: document.getElementById('member-job').value,
       level: document.getElementById('member-level').value,
       phone: document.getElementById('member-phone').value,
       joinDate: document.getElementById('member-joindate').value,
@@ -242,6 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const memberIndex = members.findIndex(m => m.id === id);
     if(memberIndex > -1) {
       members[memberIndex].name = document.getElementById('edit-member-name').value;
+      members[memberIndex].job = document.getElementById('edit-member-job').value;
       members[memberIndex].level = document.getElementById('edit-member-level').value;
       members[memberIndex].phone = document.getElementById('edit-member-phone').value;
       members[memberIndex].joinDate = document.getElementById('edit-member-joindate').value;
@@ -312,6 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('import-excel-btn').addEventListener('click', importFromExcel);
 
   renderAll();
+  document.getElementById('stat-total-members').innerText = members.length + '명';
 });
 
 // Edit/Delete globals
@@ -320,6 +374,7 @@ window.editMember = function(id) {
   if(!member) return;
   document.getElementById('edit-member-id').value = member.id;
   document.getElementById('edit-member-name').value = member.name;
+  document.getElementById('edit-member-job').value = member.job || '';
   document.getElementById('edit-member-level').value = member.level;
   document.getElementById('edit-member-phone').value = member.phone || '';
   document.getElementById('edit-member-joindate').value = member.joinDate;
@@ -355,7 +410,7 @@ function saveAllToLocal() {
   localStorage.setItem('erp_transactions', JSON.stringify(transactions));
 }
 
-// Image Compression Helper
+// Logo Compression Helper (We still need this purely for Logo resizing without crop UI)
 function resizeImageToDataUrl(file, maxWidth, callback) {
   if (!file) { callback(null); return; }
   const reader = new FileReader();
@@ -378,7 +433,6 @@ function resizeImageToDataUrl(file, maxWidth, callback) {
       canvas.height = h;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, w, h);
-      // Compress as JPEG 80% quality to save space
       callback(canvas.toDataURL('image/jpeg', 0.8));
     };
     img.src = e.target.result;
@@ -391,6 +445,7 @@ function renderAll() {
   updateFormOptions();
   renderMembers();
   renderTransactions();
+  document.getElementById('stat-total-members').innerText = members.length + '명';
 }
 
 function renderLogo() {
@@ -423,9 +478,9 @@ function renderMembers() {
   const s = settings.avatarSize;
   
   tbody.innerHTML = members.map(m => {
-    let avatarHtml = `<div style="width:${s}px; height:${s}px; border-radius:50%; background:rgba(255,255,255,0.05); display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border-color);"><i data-lucide="user" style="width:${s*0.6}px; color:var(--text-secondary)"></i></div>`;
+    let avatarHtml = `<div style="width:${s}px; height:${s}px; border-radius:50%; background:rgba(255,255,255,0.05); display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border-color); flex-shrink:0;"><i data-lucide="user" style="width:${s*0.6}px; color:var(--text-secondary)"></i></div>`;
     if (m.photo) {
-      avatarHtml = `<img src="${m.photo}" class="member-avatar" style="width:${s}px; height:${s}px;">`;
+      avatarHtml = `<img src="${m.photo}" class="member-avatar" style="width:${s}px; height:${s}px; flex-shrink:0;">`;
     }
 
     return `
@@ -436,6 +491,7 @@ function renderMembers() {
           <span style="font-weight:500;">${m.name}</span>
         </div>
       </td>
+      <td style="color:var(--text-secondary)">${m.job || '-'}</td>
       <td><span class="badge badge-${(m.level||'member').toLowerCase()}">${m.level}</span></td>
       <td style="color:var(--text-secondary)">${m.phone}</td>
       <td style="color:var(--text-secondary)">${m.joinDate}</td>
@@ -446,7 +502,7 @@ function renderMembers() {
     </tr>
   `}).join('');
   
-  lucide.createIcons(); // To render the user icon if no photo
+  lucide.createIcons();
 }
 
 function formatCurrency(amount) {
