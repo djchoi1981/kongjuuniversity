@@ -450,10 +450,11 @@ function renderAll() {
 
 function renderLogo() {
   const container = document.getElementById('app-logo-container');
+  const versionBadge = `<span class="version-badge">v1.1</span>`;
   if (settings.logoData) {
-    container.innerHTML = `<img src="${settings.logoData}" style="width: ${settings.logoWidth}px; max-width:100%;">`;
+    container.innerHTML = `<img src="${settings.logoData}" style="width: ${settings.logoWidth}px; max-width:100%;"> ${versionBadge}`;
   } else {
-    container.innerHTML = `박사모임 ERP`;
+    container.innerHTML = `<span>박사모임 ERP</span> ${versionBadge}`;
   }
 }
 
@@ -478,7 +479,7 @@ function renderMembers() {
   const s = settings.avatarSize;
   
   tbody.innerHTML = members.map(m => {
-    let avatarHtml = `<div style="width:${s}px; height:${s}px; border-radius:50%; background:rgba(255,255,255,0.05); display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border-color); flex-shrink:0;"><i data-lucide="user" style="width:${s*0.6}px; color:var(--text-secondary)"></i></div>`;
+    let avatarHtml = `<div style="width:${s}px; height:${s}px; border-radius:50%; background:var(--surface-hover); display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border-color); flex-shrink:0;"><i data-lucide="user" style="width:${s*0.6}px; color:var(--text-secondary)"></i></div>`;
     if (m.photo) {
       avatarHtml = `<img src="${m.photo}" class="member-avatar" style="width:${s}px; height:${s}px; flex-shrink:0;">`;
     }

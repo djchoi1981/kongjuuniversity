@@ -1,18 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --bg-color: #0f172a;
-  --surface-color: #1e293b;
-  --surface-hover: #334155;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
+  --bg-color: #f8fafc; /* 화이트톤 배경 */
+  --surface-color: #ffffff; /* 카드 배경 순백색 */
+  --surface-hover: #f1f5f9; /* 호버 시 약간의 회색 */
+  --text-primary: #0f172a; /* 진한 텍스트 */
+  --text-secondary: #64748b; /* 보조 텍스트 (회색) */
   --primary-color: #3b82f6;
   --primary-hover: #2563eb;
   --success-color: #10b981;
   --danger-color: #ef4444;
-  --border-color: #334155;
-  --glass-bg: rgba(30, 41, 59, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --border-color: #e2e8f0; /* 연한 테두리 */
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.5);
   --radius-md: 0.5rem;
   --radius-lg: 1rem;
 }
@@ -35,6 +35,7 @@ button { cursor: pointer; font-family: inherit; }
 .glass-card {
   background: var(--surface-color); border: 1px solid var(--border-color);
   border-radius: var(--radius-md); padding: 1.5rem; transition: transform 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); /* 약간의 그림자 추가로 화이트톤 입체감 부여 */
 }
 .glass-card:hover { transform: translateY(-2px); }
 .flex-center { display: flex; align-items: center; gap: 1rem; }
@@ -52,13 +53,13 @@ button { cursor: pointer; font-family: inherit; }
 
 /* Forms */
 .form-group { margin-bottom: 1rem; }
-.form-label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary); }
+.form-label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary); font-weight: 500; }
 .input-field {
-  width: 100%; padding: 0.75rem 1rem; background-color: var(--bg-color);
+  width: 100%; padding: 0.75rem 1rem; background-color: var(--surface-color);
   border: 1px solid var(--border-color); border-radius: var(--radius-md);
-  color: var(--text-primary); font-size: 0.95rem; transition: border-color 0.2s;
+  color: var(--text-primary); font-size: 0.95rem; transition: border-color 0.2s, box-shadow 0.2s;
 }
-.input-field:focus { outline: none; border-color: var(--primary-color); }
+.input-field:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
 .input-with-icon { position: relative; }
 .input-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); width: 18px; }
 .pl-icon { padding-left: 2.5rem; }
@@ -71,9 +72,9 @@ button { cursor: pointer; font-family: inherit; }
 
 /* Layout */
 .app-container { display: flex; min-height: 100vh; }
-.sidebar { width: 250px; background-color: var(--surface-color); border-right: 1px solid var(--border-color); padding: 1.5rem 1rem; display: flex; flex-direction: column; }
-.sidebar-logo { font-size: 1.25rem; font-weight: 700; color: var(--primary-color); margin-bottom: 2rem; padding: 0 1rem; display: flex; align-items: center; justify-content: flex-start; }
-.sidebar-logo img { object-fit: contain; } /* for uploaded logo */
+.sidebar { width: 250px; background-color: var(--surface-color); border-right: 1px solid var(--border-color); padding: 1.5rem 1rem; display: flex; flex-direction: column; z-index: 10; }
+.sidebar-logo { font-size: 1.25rem; font-weight: 700; color: var(--primary-color); margin-bottom: 2rem; padding: 0 1rem; display: flex; align-items: flex-end; justify-content: flex-start; gap: 0.5rem; flex-wrap: wrap; }
+.sidebar-logo img { object-fit: contain; }
 .nav-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: var(--text-secondary); border-radius: var(--radius-md); margin-bottom: 0.5rem; font-weight: 500; }
 .nav-link:hover, .nav-link.active { background-color: rgba(59, 130, 246, 0.1); color: var(--primary-color); }
 .main-content { flex: 1; padding: 2rem; overflow-y: auto; overflow-x: hidden; }
@@ -87,20 +88,21 @@ button { cursor: pointer; font-family: inherit; }
 .table-responsive { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; white-space: nowrap; }
 .data-table th, .data-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-.data-table th { color: var(--text-secondary); font-weight: 500; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; }
-.data-table tr:hover { background-color: rgba(255, 255, 255, 0.02); }
+.data-table th { color: var(--text-secondary); font-weight: 600; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; background: var(--bg-color); }
+.data-table tr:hover { background-color: var(--surface-hover); }
 
 .badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
-.badge-admin { background-color: rgba(16, 185, 129, 0.2); color: var(--success-color); }
-.badge-member { background-color: rgba(59, 130, 246, 0.2); color: var(--primary-color); }
-.badge-vip { background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.badge-admin { background-color: rgba(16, 185, 129, 0.1); color: var(--success-color); }
+.badge-member { background-color: rgba(59, 130, 246, 0.1); color: var(--primary-color); }
+.badge-vip { background-color: rgba(245, 158, 11, 0.1); color: #d97706; }
+.version-badge { padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background-color: var(--border-color); color: var(--text-secondary); margin-bottom: 0.1rem; }
 
 /* Images/Avatars */
 .member-avatar {
   border-radius: 50%;
   object-fit: cover;
   vertical-align: middle;
-  background-color: var(--bg-color);
+  background-color: var(--surface-hover);
   border: 1px solid var(--border-color);
 }
 .name-with-avatar {
@@ -112,7 +114,7 @@ button { cursor: pointer; font-family: inherit; }
 /* Modals */
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   z-index: 1000; display: flex; align-items: flex-start; justify-content: center;
   padding: 1rem; overflow-y: auto;
@@ -146,12 +148,11 @@ body:not(.admin-mode) .admin-only {
 }
 
 body.admin-mode #mode-badge {
-  background-color: rgba(16, 185, 129, 0.2);
+  background-color: rgba(16, 185, 129, 0.1);
   color: var(--success-color);
   content: "관리자 모드";
 }
 
-/* Make table take full width in dues view if form is hidden */
 body:not(.admin-mode) #dues-table-card {
   grid-column: 1 / -1;
 }
