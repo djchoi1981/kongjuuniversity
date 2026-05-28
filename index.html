@@ -298,7 +298,18 @@
           
           <!-- General/Admin: Recent Transactions Table -->
           <div class="glass-card" id="dues-table-card">
-            <h2 class="section-title">전체 재무 내역</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+              <h2 class="section-title" style="margin-bottom:0;">전체 재무 내역</h2>
+              <div style="display:flex; gap:0.5rem; align-items:center;">
+                <label style="font-size:0.875rem; color:var(--text-secondary);">정렬:</label>
+                <select id="dues-sort" class="input-field" style="width: 140px; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                  <option value="date-desc">최근 날짜순</option>
+                  <option value="date-asc">과거 날짜순</option>
+                  <option value="amount-desc">높은 금액순</option>
+                  <option value="amount-asc">낮은 금액순</option>
+                </select>
+              </div>
+            </div>
             <div class="table-responsive">
               <table class="data-table">
                 <thead>
@@ -315,6 +326,14 @@
                 </tbody>
               </table>
             </div>
+            <!-- Pagination -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 1.5rem;">
+              <span id="dues-page-info" style="font-size:0.85rem; color:var(--text-secondary);">페이지 1 / 1 (총 0건)</span>
+              <div style="display:flex; gap:0.5rem;">
+                <button class="btn btn-ghost" id="dues-prev-btn" style="padding:0.4rem 0.8rem; font-size:0.85rem;"><i data-lucide="chevron-left" style="width:16px; vertical-align:middle;"></i> 이전</button>
+                <button class="btn btn-ghost" id="dues-next-btn" style="padding:0.4rem 0.8rem; font-size:0.85rem;">다음 <i data-lucide="chevron-right" style="width:16px; vertical-align:middle;"></i></button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -325,7 +344,18 @@
           <h1>경조사(지출) 내역 모아보기</h1>
         </div>
         <div class="glass-card">
-          <p style="color:var(--text-secondary); margin-bottom: 1rem;">이 화면은 '재무 관리'에서 등록된 지출(경조사 등) 내역만 모아서 보여주는 화면입니다.</p>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+            <p style="color:var(--text-secondary); margin-bottom: 0;">이 화면은 '재무 관리'에서 등록된 지출(경조사 등) 내역만 모아서 보여주는 화면입니다.</p>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <label style="font-size:0.875rem; color:var(--text-secondary); white-space:nowrap;">정렬:</label>
+              <select id="events-sort" class="input-field" style="width: 140px; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                <option value="date-desc">최근 날짜순</option>
+                <option value="date-asc">과거 날짜순</option>
+                <option value="amount-desc">높은 금액순</option>
+                <option value="amount-asc">낮은 금액순</option>
+              </select>
+            </div>
+          </div>
           <div class="table-responsive">
             <table class="data-table">
               <thead>
@@ -340,6 +370,14 @@
                 <!-- JS Rendered -->
               </tbody>
             </table>
+          </div>
+          <!-- Pagination -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 1.5rem;">
+            <span id="events-page-info" style="font-size:0.85rem; color:var(--text-secondary);">페이지 1 / 1 (총 0건)</span>
+            <div style="display:flex; gap:0.5rem;">
+              <button class="btn btn-ghost" id="events-prev-btn" style="padding:0.4rem 0.8rem; font-size:0.85rem;"><i data-lucide="chevron-left" style="width:16px; vertical-align:middle;"></i> 이전</button>
+              <button class="btn btn-ghost" id="events-next-btn" style="padding:0.4rem 0.8rem; font-size:0.85rem;">다음 <i data-lucide="chevron-right" style="width:16px; vertical-align:middle;"></i></button>
+            </div>
           </div>
         </div>
       </section>
@@ -590,6 +628,7 @@
               <th style="text-align:center;">10월</th>
               <th style="text-align:center;">11월</th>
               <th style="text-align:center;">12월</th>
+              <th style="text-align:center; min-width:80px; border-left: 1px solid var(--border-color); color: var(--primary-color);">연납</th>
             </tr>
           </thead>
           <tbody id="matrix-tbody">

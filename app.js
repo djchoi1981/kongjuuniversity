@@ -11,6 +11,15 @@ let settings = {
   avatarSize: 40
 };
 
+// Pagination & Sorting State
+let duesPage = 1;
+const duesPageSize = 10;
+let duesSortMode = 'date-desc';
+
+let eventsPage = 1;
+const eventsPageSize = 10;
+let eventsSortMode = 'date-desc';
+
 // Pending image uploads (temporary state during modal interaction)
 let pendingAddPhoto = null;
 let pendingEditPhoto = null;
@@ -279,6 +288,9 @@ document.addEventListener('DOMContentLoaded', () => {
       let row = `<tr><td style="position: sticky; left: 0; background: var(--surface-color); font-weight:500; border-right: 1px solid var(--border-color); z-index: 11;">${m.name}</td>`;
       const joinYm = m.joinDate ? m.joinDate.substring(0, 7) : '0000-00';
       
+      // Find annual payment for this member in this year
+      const annualTx = transactions.find(t => t.kind === 'income' && t.desc === m.name && t.type === '연납' && t.date.startsWith(year));
+
       for(let i=1; i<=12; i++) {
         const mm = i.toString().padStart(2, '0');
         const cellYm = `${year}-${mm}`;
@@ -286,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cellYm < joinYm) {
           row += `<td style="background: var(--surface-hover); color: var(--text-secondary); font-size: 0.8rem;">해당없음</td>`;
         } else {
-          const tx = transactions.find(t => t.kind === 'income' && t.desc === m.name && t.date === cellYm);
+          const tx = transactions.find(t => t.kind === 'income' && t.desc === m.name && t.date === cellYm && t.type !== '연납');
           
           let cellHtml = '';
           let cellClass = 'matrix-cell';
@@ -301,6 +313,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
               cellHtml = `<span class="badge badge-success">완료</span>`;
             }
+          } else if (annualTx) {
+            // Covered by annual payment
+            statusAttr = `data-txid="${annualTx.id}" data-status="annual-paid"`;
+            cellHtml = `<span class="badge" style="background:rgba(59,130,246,0.1); color:var(--primary-color)">연납</span>`;
           } else {
             statusAttr = `data-txid="" data-status="none"`;
           }
@@ -310,17 +326,36 @@ document.addEventListener('DOMContentLoaded', () => {
           </td>`;
         }
       }
+      
+      // Render the annual column cell
+      let annualCellHtml = '';
+      let annualStatusAttr = '';
+      if (annualTx) {
+        annualStatusAttr = `data-txid="${annualTx.id}" data-status="paid"`;
+        annualCellHtml = `<span class="badge badge-success">완료</span>`;
+      } else {
+        annualStatusAttr = `data-txid="" data-status="none"`;
+        annualCellHtml = `<span class="badge" style="background:rgba(239,68,68,0.05); color:var(--text-secondary); cursor:pointer;">미납</span>`;
+      }
+      
+      row += `<td class="matrix-annual-cell" data-member="${m.name}" data-year="${year}" ${annualStatusAttr} style="cursor:pointer; border-left:1px solid var(--border-color); transition: background 0.2s;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background=''">
+        ${annualCellHtml}
+      </td>`;
+
       row += `</tr>`;
       html += row;
     });
     tbody.innerHTML = html;
     
+    // Bind click events for monthly cells
     document.querySelectorAll('.matrix-cell').forEach(cell => {
       cell.addEventListener('click', () => {
         const member = cell.getAttribute('data-member');
         const ym = cell.getAttribute('data-ym');
         const status = cell.getAttribute('data-status');
         const txid = cell.getAttribute('data-txid');
+        
+        document.getElementById('modal-cell-action').removeAttribute('data-is-annual');
         
         document.getElementById('cell-action-title').innerText = `[${member}] ${ym} 납부 상태`;
         document.getElementById('cell-action-member').value = member;
@@ -330,6 +365,18 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('cell-action-status').value = 'paid';
           document.getElementById('cell-action-amount').value = getDuesForDate(ym).monthly;
           document.getElementById('btn-cell-delete').style.display = 'none';
+        } else if (status === 'annual-paid') {
+          // Editing the underlying annual transaction
+          document.getElementById('cell-action-title').innerText = `[${member}] ${ym.substring(0,4)}년 연납 상태 수정`;
+          document.getElementById('cell-action-status').value = 'paid';
+          document.getElementById('btn-cell-delete').style.display = 'block';
+          document.getElementById('btn-cell-delete').setAttribute('data-txid', txid);
+          
+          const existingTx = transactions.find(t => t.id === txid);
+          if (existingTx) {
+            document.getElementById('cell-action-amount').value = existingTx.amount;
+          }
+          document.getElementById('modal-cell-action').setAttribute('data-is-annual', 'true');
         } else {
           document.getElementById('cell-action-status').value = status;
           document.getElementById('btn-cell-delete').style.display = 'block';
@@ -344,6 +391,38 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modal-cell-action').style.display = 'flex';
       });
     });
+
+    // Bind click events for annual column cells
+    document.querySelectorAll('.matrix-annual-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const member = cell.getAttribute('data-member');
+        const targetYear = cell.getAttribute('data-year');
+        const status = cell.getAttribute('data-status');
+        const txid = cell.getAttribute('data-txid');
+        
+        document.getElementById('cell-action-title').innerText = `[${member}] ${targetYear}년 연납 등록/수정`;
+        document.getElementById('cell-action-member').value = member;
+        document.getElementById('cell-action-month').value = `${targetYear}-01`;
+        
+        if (status === 'none') {
+          document.getElementById('cell-action-status').value = 'paid';
+          document.getElementById('cell-action-amount').value = getDuesForDate(`${targetYear}-01`).annual;
+          document.getElementById('btn-cell-delete').style.display = 'none';
+        } else {
+          document.getElementById('cell-action-status').value = 'paid';
+          document.getElementById('btn-cell-delete').style.display = 'block';
+          document.getElementById('btn-cell-delete').setAttribute('data-txid', txid);
+          
+          const existingTx = transactions.find(t => t.id === txid);
+          if (existingTx) {
+            document.getElementById('cell-action-amount').value = existingTx.amount;
+          }
+        }
+        
+        document.getElementById('modal-cell-action').setAttribute('data-is-annual', 'true');
+        document.getElementById('modal-cell-action').style.display = 'flex';
+      });
+    });
   }
 
   document.getElementById('matrix-year').addEventListener('change', renderMatrix);
@@ -355,6 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('btn-cell-cancel').addEventListener('click', () => {
+    document.getElementById('modal-cell-action').removeAttribute('data-is-annual');
     document.getElementById('modal-cell-action').style.display = 'none';
   });
 
@@ -364,10 +444,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const status = document.getElementById('cell-action-status').value;
     const amountPaid = parseInt(document.getElementById('cell-action-amount').value, 10);
     
-    let txIndex = transactions.findIndex(t => t.kind === 'income' && t.desc === memberName && t.date === targetMonth);
+    const isAnnualAction = document.getElementById('modal-cell-action').getAttribute('data-is-annual') === 'true';
+    
+    let txIndex = -1;
+    if (isAnnualAction) {
+      const targetYear = targetMonth.substring(0, 4);
+      txIndex = transactions.findIndex(t => t.kind === 'income' && t.desc === memberName && t.type === '연납' && t.date.startsWith(targetYear));
+    } else {
+      txIndex = transactions.findIndex(t => t.kind === 'income' && t.desc === memberName && t.date === targetMonth && t.type !== '연납');
+    }
     
     let amount = 0;
-    let statusDesc = '월납';
+    let statusDesc = isAnnualAction ? '연납' : '월납';
     if (status === 'paid') {
       amount = amountPaid || 0;
     } else if (status === 'exempt') {
@@ -400,6 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
     saveAllToLocal();
     renderAll();
     renderMatrix();
+    document.getElementById('modal-cell-action').removeAttribute('data-is-annual');
     document.getElementById('modal-cell-action').style.display = 'none';
   });
 
@@ -410,6 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
       saveAllToLocal();
       renderAll();
       renderMatrix();
+      document.getElementById('modal-cell-action').removeAttribute('data-is-annual');
       document.getElementById('modal-cell-action').style.display = 'none';
     }
   });

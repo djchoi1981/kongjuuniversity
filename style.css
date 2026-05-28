@@ -156,3 +156,9 @@ body.admin-mode #mode-badge {
 body:not(.admin-mode) #dues-table-card {
   grid-column: 1 / -1;
 }
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
