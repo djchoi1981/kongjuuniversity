@@ -1,4 +1,24 @@
-// Local Persistence Setup (Firebase omitted for file:// CORS compatibility)
+// Firebase Config & Initialization (using CDN compat scripts)
+const firebaseConfig = {
+  apiKey: "AIzaSyCsarv8R9l6S2QDc-a0gIWC2qvaFoNNvD4",
+  authDomain: "kongjuuniversity.firebaseapp.com",
+  databaseURL: "https://kongjuuniversity-default-rtdb.firebaseio.com",
+  projectId: "kongjuuniversity",
+  storageBucket: "kongjuuniversity.firebasestorage.app",
+  messagingSenderId: "849101630489",
+  appId: "1:849101630489:web:e2a604b9474a8aeab7ce88",
+  measurementId: "G-SZX9JN7B4Y"
+};
+
+let db = null;
+try {
+  if (typeof firebase !== 'undefined') {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  }
+} catch (e) {
+  console.warn("Firebase initialization skipped:", e);
+}
 
 // State
 let isAdmin = false;
@@ -655,6 +675,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderAll();
   document.getElementById('stat-total-members').innerText = members.length + '명';
+
+  // Load from Firestore in the background
+  loadDataFromFirestore();
 });
 
 // Edit/Delete globals
@@ -702,6 +725,99 @@ function saveAllToLocal() {
   localStorage.setItem('erp_members', JSON.stringify(members));
   localStorage.setItem('erp_transactions', JSON.stringify(transactions));
   renderLogo();
+
+  // Background Cloud Sync
+  syncAllToFirestore();
+}
+
+async function syncAllToFirestore() {
+  if (!db) return;
+  try {
+    // 1. Sync Settings
+    await db.collection("settings").doc("main").set(settings);
+
+    // 2. Sync Members
+    const membersSnapshot = await db.collection("members").get();
+    const batch = db.batch();
+    
+    // Delete removed members
+    membersSnapshot.forEach(doc => {
+      if (!members.find(m => m.id === doc.id)) {
+        batch.delete(doc.ref);
+      }
+    });
+    
+    // Set current members
+    members.forEach(m => {
+      const data = { ...m };
+      delete data.id;
+      batch.set(db.collection("members").doc(m.id), data);
+    });
+
+    // 3. Sync Transactions
+    const txSnapshot = await db.collection("transactions").get();
+    // Delete removed transactions
+    txSnapshot.forEach(doc => {
+      if (!transactions.find(t => t.id === doc.id)) {
+        batch.delete(doc.ref);
+      }
+    });
+    // Set current transactions
+    transactions.forEach(t => {
+      const data = { ...t };
+      delete data.id;
+      batch.set(db.collection("transactions").doc(t.id), data);
+    });
+
+    await batch.commit();
+    console.log("Cloud sync successful.");
+  } catch (error) {
+    console.error("Cloud sync failed:", error);
+  }
+}
+
+async function loadDataFromFirestore() {
+  if (!db) return;
+  try {
+    // 1. Load Settings
+    const settingsDoc = await db.collection("settings").doc("main").get();
+    if (settingsDoc.exists) {
+      settings = { ...settings, ...settingsDoc.data() };
+      localStorage.setItem('erp_settings', JSON.stringify(settings));
+    }
+    
+    // 2. Load Members
+    const membersSnapshot = await db.collection("members").get();
+    const loadedMembers = [];
+    membersSnapshot.forEach(doc => {
+      loadedMembers.push({ id: doc.id, ...doc.data() });
+    });
+    if (loadedMembers.length > 0) {
+      members = loadedMembers;
+      localStorage.setItem('erp_members', JSON.stringify(members));
+    }
+
+    // 3. Load Transactions
+    const txSnapshot = await db.collection("transactions").get();
+    const loadedTx = [];
+    txSnapshot.forEach(doc => {
+      loadedTx.push({ id: doc.id, ...doc.data() });
+    });
+    if (loadedTx.length > 0) {
+      transactions = loadedTx;
+      localStorage.setItem('erp_transactions', JSON.stringify(transactions));
+    }
+    
+    renderAll();
+    // Refresh payment matrix if open
+    const matrixModal = document.getElementById('modal-matrix');
+    if (matrixModal && matrixModal.style.display === 'flex') {
+      renderMatrix();
+    }
+    console.log("Cloud data loaded successfully.");
+  } catch (error) {
+    console.error("Cloud load failed:", error);
+  }
 }
 
 // Logo Compression Helper (We still need this purely for Logo resizing without crop UI)
