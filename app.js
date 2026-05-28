@@ -273,54 +273,117 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // ADD MEMBER Logic
-  document.getElementById('btn-open-bulk-dues').addEventListener('click', () => {
-    document.getElementById('bulk-month').value = new Date().toISOString().substring(0, 7);
+  function renderMatrix() {
+    const year = document.getElementById('matrix-year').value;
+    const tbody = document.getElementById('matrix-tbody');
     
-    const tbody = document.getElementById('bulk-members-list');
-    tbody.innerHTML = members.map(m => `
-      <tr>
-        <td style="font-weight:500;">${m.name}</td>
-        <td><span class="badge badge-${(m.level||'member').toLowerCase()}">${m.level}</span></td>
-        <td>
-          <select class="input-field bulk-status-select" data-id="${m.id}" data-name="${m.name}" data-level="${m.level}" style="padding: 0.25rem 0.5rem; font-size: 0.85rem; width: auto;">
-            <option value="paid" selected>납부완료</option>
-            <option value="exempt">공제</option>
-            <option value="unpaid">미납</option>
-          </select>
-        </td>
-      </tr>
-    `).join('');
+    const sortedMembers = [...members].sort((a,b) => a.name.localeCompare(b.name));
+    
+    let html = '';
+    sortedMembers.forEach(m => {
+      let row = `<tr><td style="position: sticky; left: 0; background: var(--surface-color); font-weight:500; border-right: 1px solid var(--border-color); z-index: 11;">${m.name}</td>`;
+      const joinYm = m.joindate ? m.joindate.substring(0, 7) : '0000-00';
+      
+      for(let i=1; i<=12; i++) {
+        const mm = i.toString().padStart(2, '0');
+        const cellYm = `${year}-${mm}`;
+        
+        if (cellYm < joinYm) {
+          row += `<td style="background: var(--surface-hover); color: var(--text-secondary); font-size: 0.8rem;">해당없음</td>`;
+        } else {
+          const tx = transactions.find(t => t.kind === 'income' && t.desc === m.name && t.date === cellYm);
+          
+          let cellHtml = '';
+          let cellClass = 'matrix-cell';
+          let statusAttr = '';
+          
+          if (tx) {
+            statusAttr = `data-txid="${tx.id}" data-status="${tx.status || 'paid'}"`;
+            if (tx.status === 'exempt') {
+              cellHtml = `<span class="badge" style="background:var(--surface-hover); color:var(--text-secondary)">공제</span>`;
+            } else if (tx.status === 'unpaid') {
+              cellHtml = `<span class="badge" style="background:rgba(239,68,68,0.1); color:var(--danger-color)">미납</span>`;
+            } else {
+              cellHtml = `<span class="badge badge-success">완료</span>`;
+            }
+          } else {
+            statusAttr = `data-txid="" data-status="none"`;
+          }
+          
+          row += `<td class="${cellClass}" data-member="${m.name}" data-ym="${cellYm}" ${statusAttr} style="cursor:pointer; transition: background 0.2s;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background=''">
+            ${cellHtml}
+          </td>`;
+        }
+      }
+      row += `</tr>`;
+      html += row;
+    });
+    tbody.innerHTML = html;
+    
+    document.querySelectorAll('.matrix-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const member = cell.getAttribute('data-member');
+        const ym = cell.getAttribute('data-ym');
+        const status = cell.getAttribute('data-status');
+        const txid = cell.getAttribute('data-txid');
+        
+        document.getElementById('cell-action-title').innerText = `[${member}] ${ym} 납부 상태`;
+        document.getElementById('cell-action-member').value = member;
+        document.getElementById('cell-action-month').value = ym;
+        
+        if (status === 'none') {
+          document.getElementById('cell-action-status').value = 'paid';
+          document.getElementById('btn-cell-delete').style.display = 'none';
+        } else {
+          document.getElementById('cell-action-status').value = status;
+          document.getElementById('btn-cell-delete').style.display = 'block';
+          document.getElementById('btn-cell-delete').setAttribute('data-txid', txid);
+        }
+        
+        document.getElementById('modal-cell-action').style.display = 'flex';
+      });
+    });
+  }
 
-    document.getElementById('modal-bulk-dues').style.display = 'flex';
+  document.getElementById('matrix-year').addEventListener('change', renderMatrix);
+
+  document.getElementById('btn-open-matrix').addEventListener('click', () => {
+    document.getElementById('matrix-year').value = new Date().getFullYear().toString();
+    renderMatrix();
+    document.getElementById('modal-matrix').style.display = 'flex';
   });
 
-  document.getElementById('form-bulk-dues').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const targetMonth = document.getElementById('bulk-month').value;
-    const selects = document.querySelectorAll('.bulk-status-select');
+  document.getElementById('btn-cell-cancel').addEventListener('click', () => {
+    document.getElementById('modal-cell-action').style.display = 'none';
+  });
+
+  document.getElementById('btn-cell-save').addEventListener('click', () => {
+    const memberName = document.getElementById('cell-action-member').value;
+    const targetMonth = document.getElementById('cell-action-month').value;
+    const status = document.getElementById('cell-action-status').value;
+    
+    let txIndex = transactions.findIndex(t => t.kind === 'income' && t.desc === memberName && t.date === targetMonth);
     
     const duesPolicy = getDuesForDate(targetMonth);
     const amountPaid = duesPolicy.monthly;
+    let amount = 0;
+    let statusDesc = '월납';
+    if (status === 'paid') {
+      amount = amountPaid;
+    } else if (status === 'exempt') {
+      amount = 0;
+      statusDesc = '공제';
+    } else if (status === 'unpaid') {
+      amount = 0;
+      statusDesc = '미납';
+    }
     
-    let addedCount = 0;
-    
-    selects.forEach(select => {
-      const status = select.value;
-      const memberName = select.getAttribute('data-name');
-      const memberLevel = select.getAttribute('data-level').toLowerCase();
-      
-      let amount = 0;
-      let statusDesc = '월납';
-      if (status === 'paid') {
-        amount = amountPaid;
-      } else if (status === 'exempt') {
-        amount = 0;
-        statusDesc = '공제';
-      } else if (status === 'unpaid') {
-        amount = 0;
-        statusDesc = '미납';
-      }
-      
+    if (txIndex > -1) {
+      transactions[txIndex].status = status;
+      transactions[txIndex].amount = amount;
+      transactions[txIndex].type = statusDesc;
+    } else {
+      const mem = members.find(m => m.name === memberName);
       const newTx = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
         kind: 'income',
@@ -329,17 +392,26 @@ document.addEventListener('DOMContentLoaded', () => {
         desc: memberName,
         amount: amount,
         date: targetMonth,
-        badge: memberLevel
+        badge: mem ? mem.level.toLowerCase() : 'member'
       };
-      
       transactions.unshift(newTx);
-      addedCount++;
-    });
+    }
     
     saveAllToLocal();
     renderAll();
-    document.getElementById('modal-bulk-dues').style.display = 'none';
-    alert(`${targetMonth}월 회비 내역 ${addedCount}건이 일괄 등록되었습니다.`);
+    renderMatrix();
+    document.getElementById('modal-cell-action').style.display = 'none';
+  });
+
+  document.getElementById('btn-cell-delete').addEventListener('click', (e) => {
+    const txid = e.target.getAttribute('data-txid');
+    if (txid) {
+      transactions = transactions.filter(t => t.id !== txid);
+      saveAllToLocal();
+      renderAll();
+      renderMatrix();
+      document.getElementById('modal-cell-action').style.display = 'none';
+    }
   });
 
   document.getElementById('form-add-member').addEventListener('submit', (e) => {
